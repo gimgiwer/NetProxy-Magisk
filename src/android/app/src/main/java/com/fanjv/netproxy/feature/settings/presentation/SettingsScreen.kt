@@ -1,5 +1,6 @@
 package com.fanjv.netproxy.feature.settings.presentation
 
+import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,11 +16,15 @@ import androidx.compose.material.icons.rounded.AppRegistration
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.ContactPage
 import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Router
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -164,6 +169,31 @@ internal fun SettingsScreen(
                                 },
                                 checked = settings.autoStartEnabled,
                                 onCheckedChange = { viewModel.setAutoStartEnabled(it) }
+                            )
+                        },
+                        CardItem("hideNonPlayWarning") {
+                            val prefs = remember(context) {
+                                context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                            }
+                            var hideWarning by remember {
+                                mutableStateOf(prefs.getBoolean("hide_non_play_warning", false))
+                            }
+                            SwitchPreference(
+                                title = stringResource(R.string.settings_hide_non_play_warning),
+                                summary = stringResource(R.string.settings_hide_non_play_warning_summary),
+                                startAction = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.NotificationsOff,
+                                        contentDescription = null,
+                                        modifier = Modifier.padding(end = 6.dp),
+                                        tint = colorScheme.onBackground
+                                    )
+                                },
+                                checked = hideWarning,
+                                onCheckedChange = { enabled ->
+                                    hideWarning = enabled
+                                    prefs.edit().putBoolean("hide_non_play_warning", enabled).apply()
+                                }
                             )
                         },
                     ),

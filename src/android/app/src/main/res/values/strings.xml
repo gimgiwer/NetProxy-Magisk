@@ -11,6 +11,8 @@
     <string name="read_only">只读</string>
     <string name="non_play_build_warning_title">非 Google Play 版本</string>
     <string name="non_play_build_warning_summary">此版本未使用 Google Play 应用签名密钥签名。建议通过 Google Play 安装正式版。</string>
+    <string name="settings_hide_non_play_warning">隐藏非 Google Play 签名警告</string>
+    <string name="settings_hide_non_play_warning_summary">在仪表盘中不再提示未通过 Google Play 签名的警告横幅</string>
 
     <!-- Common actions and labels -->
     <string name="common_add">添加</string>

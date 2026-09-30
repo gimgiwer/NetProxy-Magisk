@@ -21,9 +21,12 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Router
 import androidx.compose.material.icons.rounded.Storage
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -67,7 +70,13 @@ internal fun CatalogDashboardScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current.applicationContext
-    val showNonPlaySignatureWarning = remember(context) {
+    var hideNonPlayWarning by remember {
+        mutableStateOf(
+            context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                .getBoolean("hide_non_play_warning", false)
+        )
+    }
+    val showNonPlaySignatureWarning = !hideNonPlayWarning && remember(context) {
         !isSignedWithGooglePlayKey(context)
     }
     val snackbarHostState = rememberAppSnackbarHostState()
@@ -80,6 +89,8 @@ internal fun CatalogDashboardScreen(
         "${stringResource(R.string.no_module_title)}\n${stringResource(R.string.no_module_summary)}"
 
     LifecycleResumeEffect(isActive) {
+        hideNonPlayWarning = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+            .getBoolean("hide_non_play_warning", false)
         viewModel.setVisible(isActive)
         onPauseOrDispose { if (isActive) viewModel.setVisible(false) }
     }
