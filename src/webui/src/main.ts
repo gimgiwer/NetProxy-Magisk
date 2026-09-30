@@ -3,22 +3,23 @@ import { parseCommandLine } from './command'
 import { ctl, ctlJson, shell, inKsu, completions as fetchCompletions } from './exec'
 import { formatCtlOutput } from './format'
 import { getHelp } from './help'
+import { getLocale, setLocale, onLocaleChange, t, getSupportedLocales } from './i18n.ts'
 import { createPoller } from './polling'
 import './style.css'
 
 const PROMPT = '❯ '
-const STATE_MAP: Record<string, { label: string; color: string }> = {
-  ready: { label: '运行中', color: 'var(--good)' },
-  stopped: { label: '未运行', color: 'var(--text-faint)' },
-  failed: { label: '启动失败', color: 'var(--danger)' },
-  starting: { label: '启动中', color: 'var(--medium)' },
-  stopping: { label: '停止中', color: 'var(--medium)' },
-  preparing: { label: '准备中', color: 'var(--medium)' },
+const STATE_COLORS: Record<string, string> = {
+  ready: 'var(--good)',
+  stopped: 'var(--text-faint)',
+  failed: 'var(--danger)',
+  starting: 'var(--medium)',
+  stopping: 'var(--medium)',
+  preparing: 'var(--medium)',
 }
 
 function byId<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id)
-  if (!element) throw new Error(`缺少页面元素: ${id}`)
+  if (!element) throw new Error(t('common.missing_element', { id }))
   return element as T
 }
 
@@ -30,7 +31,9 @@ const previousButton = byId<HTMLButtonElement>('history-prev')
 const nextButton = byId<HTMLButtonElement>('history-next')
 const runButton = byId<HTMLButtonElement>('run')
 const serviceStatus = byId<HTMLSpanElement>('service-status')
+const serviceLabel = byId<HTMLSpanElement>('service-label')
 const serviceState = byId<HTMLElement>('service-state')
+const langSelect = byId<HTMLSelectElement>('lang-select')
 const environment = byId<HTMLSpanElement>('environment')
 const buttons = [completeButton, previousButton, nextButton, runButton]
 const busyLine = document.createElement('pre')
@@ -43,6 +46,8 @@ let tabCount = 0
 let busy = false
 let knownGroups: string[] = []
 let knownSubscriptions: string[] = []
+let lastServiceState: string | undefined
+let outputHasOnlyHelp = true
 
 function scrollToBottom() {
   requestAnimationFrame(() => { output.scrollTop = output.scrollHeight })
@@ -88,10 +93,45 @@ async function refreshCompletions() {
 }
 
 function renderServiceState(state?: string) {
-  const status = state ? STATE_MAP[state] || { label: state, color: 'var(--text-faint)' } : { label: '检测中', color: 'var(--text-faint)' }
-  serviceState.textContent = status.label
-  serviceState.style.color = status.color
+  lastServiceState = state
+  if (!state) {
+    serviceState.textContent = t('states.detecting')
+    serviceState.style.color = 'var(--text-faint)'
+    return
+  }
+  const translated = t(`states.${state}`)
+  serviceState.textContent = translated !== `states.${state}` ? translated : state
+  serviceState.style.color = STATE_COLORS[state] || 'var(--text-faint)'
 }
+
+function renderStatusBar() {
+  serviceLabel.textContent = t('common.service')
+  renderServiceState(lastServiceState)
+  environment.textContent = inKsu ? t('common.env_ksu') : t('common.env_preview')
+}
+
+function initLangSelect() {
+  langSelect.innerHTML = ''
+  for (const meta of getSupportedLocales()) {
+    const opt = document.createElement('option')
+    opt.value = meta.code
+    opt.textContent = meta.nativeName
+    langSelect.append(opt)
+  }
+  langSelect.value = getLocale()
+  langSelect.addEventListener('change', () => {
+    setLocale(langSelect.value)
+  })
+}
+
+onLocaleChange(newLocale => {
+  langSelect.value = newLocale
+  renderStatusBar()
+  if (outputHasOnlyHelp) {
+    output.replaceChildren()
+    append('help', getHelp())
+  }
+})
 
 const statusPoller = createPoller(
   () => ctlJson<{ state?: string }>(['service', 'status']),
@@ -102,6 +142,7 @@ async function run(raw: string) {
   const command = raw.trim()
   if (!command || busy) return
 
+  outputHasOnlyHelp = false
   history = [...history, command]
   historyIndex = -1
   tabCount = 0
@@ -120,7 +161,7 @@ async function run(raw: string) {
       return
     }
     if (command === 'exit') {
-      err = 'WebView 中无法退出，请关闭页面'
+      err = t('common.webview_exit_hint')
     } else if (command === 'help') {
       append('help', getHelp())
     } else if (command.startsWith('help ')) {
@@ -140,9 +181,9 @@ async function run(raw: string) {
 
     if (out) append('o', out)
     if (err) append('e', err)
-    if (code !== 0 && !out && !err) append('e', `退出码: ${code}`)
+    if (code !== 0 && !out && !err) append('e', t('common.exit_code', { code }))
   } catch (error) {
-    append('e', `异常: ${error instanceof Error ? error.message : String(error)}`)
+    append('e', t('common.exception', { message: error instanceof Error ? error.message : String(error) }))
   } finally {
     setBusy(false)
   }
@@ -212,7 +253,8 @@ document.addEventListener('visibilitychange', () => {
   statusPoller.setActive(!document.hidden)
 })
 
-environment.textContent = inKsu ? 'KernelSU' : '预览'
+initLangSelect()
+renderStatusBar()
 append('help', getHelp())
 void refreshCompletions()
 statusPoller.setActive(!document.hidden)

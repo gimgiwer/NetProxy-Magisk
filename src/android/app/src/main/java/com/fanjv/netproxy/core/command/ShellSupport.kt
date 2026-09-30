@@ -16,14 +16,14 @@ internal object ShellCommand {
             TimedShellResult(result.isSuccess, result.out, result.err)
         } catch (_: TimeoutException) {
             future.cancel(true)
-            TimedShellResult(false, emptyList(), listOf("命令执行超时"))
+            TimedShellResult(false, emptyList(), listOf(shellTimeoutMessage()))
         } catch (_: InterruptedException) {
             future.cancel(true)
             Thread.currentThread().interrupt()
-            TimedShellResult(false, emptyList(), listOf("命令执行被中断"))
+            TimedShellResult(false, emptyList(), listOf(shellInterruptedMessage()))
         } catch (error: Exception) {
             future.cancel(true)
-            TimedShellResult(false, emptyList(), listOf(error.message ?: "命令执行失败"))
+            TimedShellResult(false, emptyList(), listOf(shellFailedMessage(error)))
         }
     }
 
@@ -43,7 +43,7 @@ internal object ShellConfigFile {
         "1", "true" -> true
         "0", "false" -> false
         null -> default
-        else -> error("布尔配置无效: $value")
+        else -> error(invalidBooleanMessage(value))
     }
 
     fun parse(content: String): Map<String, String> = buildMap {
@@ -71,8 +71,8 @@ internal object ShellConfigFile {
         value: String,
         forceQuotes: Boolean = false
     ): String {
-        require(key.matches(Regex("[A-Z][A-Z0-9_]*"))) { "配置键无效" }
-        require(value.none { it == '\n' || it == '\r' || it.code == 0 }) { "配置值无效" }
+        require(key.matches(Regex("[A-Z][A-Z0-9_]*"))) { invalidConfigKeyMessage() }
+        require(value.none { it == '\n' || it == '\r' || it.code == 0 }) { invalidConfigValueMessage() }
         val escaped = value.replace("\\", "\\\\").replace("\"", "\\\"")
         val formatted = if (forceQuotes || value.isBlank() || value.any(Char::isWhitespace)) {
             "\"$escaped\""
@@ -89,4 +89,40 @@ internal object ShellConfigFile {
         }
         return lines.joinToString("\n")
     }
+}
+
+private fun shellTimeoutMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "命令执行超时"
+    "ru" -> "Превышено время ожидания команды"
+    else -> "Command execution timed out"
+}
+
+private fun shellInterruptedMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "命令执行被中断"
+    "ru" -> "Выполнение команды прервано"
+    else -> "Command execution interrupted"
+}
+
+private fun shellFailedMessage(error: Throwable): String = error.message ?: when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "命令执行失败"
+    "ru" -> "Сбой выполнения команды"
+    else -> "Command execution failed"
+}
+
+private fun invalidBooleanMessage(value: String): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "布尔配置无效: $value"
+    "ru" -> "Недопустимое булево значение: $value"
+    else -> "Invalid boolean configuration: $value"
+}
+
+private fun invalidConfigKeyMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "配置键无效"
+    "ru" -> "Недопустимый ключ конфигурации"
+    else -> "Invalid configuration key"
+}
+
+private fun invalidConfigValueMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "配置值无效"
+    "ru" -> "Недопустимое значение конфигурации"
+    else -> "Invalid configuration value"
 }

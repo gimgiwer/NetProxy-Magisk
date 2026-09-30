@@ -33,7 +33,7 @@ internal fun FilterBar(
     ) {
         TabRow(
             tabs = groups.map {
-                val name = if (it.group.id == "default") {
+                val name = if (it.group.id == "default" || it.group.name == "本地配置") {
                     stringResource(R.string.node_local_config)
                 } else {
                     it.group.name

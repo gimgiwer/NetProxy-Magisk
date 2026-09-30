@@ -69,7 +69,7 @@ internal class NetProxyCtlCodec(
             throw NetProxyCtlException(
                 resultCode = "transport.invalid_output",
                 message = output.stderr.lastOrNull()?.takeIf(String::isNotBlank)
-                    ?: "模块没有返回有效的管理接口数据"
+                    ?: noValidInterfaceDataMessage()
             )
         }
 
@@ -77,7 +77,7 @@ internal class NetProxyCtlCodec(
             .getOrElse {
                 throw NetProxyCtlException(
                     resultCode = "transport.invalid_json",
-                    message = "模块返回的数据格式无效"
+                    message = invalidDataFormatMessage()
                 )
             }
         val schema = root["schema"]?.jsonPrimitive?.intOrNull ?: 0
@@ -89,14 +89,14 @@ internal class NetProxyCtlCodec(
         if (schema != CONTRACT_SCHEMA) {
             throw NetProxyCtlException(
                 resultCode = "transport.unsupported_schema",
-                message = "模块管理接口版本不受支持"
+                message = unsupportedInterfaceVersionMessage()
             )
         }
         if (!ok || !output.successful) {
             throw NetProxyCtlException(
                 resultCode = code.ifBlank { "command.failed" },
                 message = message.ifBlank {
-                    output.stderr.lastOrNull()?.takeIf(String::isNotBlank) ?: "模块操作失败"
+                    output.stderr.lastOrNull()?.takeIf(String::isNotBlank) ?: moduleOperationFailedMessage()
                 },
                 data = data
             )
@@ -159,4 +159,28 @@ internal class NetProxyCtlClient(
             arguments.firstOrNull() == "sub" &&
                 arguments.getOrNull(1) in setOf("add", "edit", "update", "update-all")
     }
+}
+
+private fun noValidInterfaceDataMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块没有返回有效的管理接口数据"
+    "ru" -> "Модуль не вернул корректные данные интерфейса управления"
+    else -> "Module did not return valid management interface data"
+}
+
+private fun invalidDataFormatMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块返回的数据格式无效"
+    "ru" -> "Модуль вернул данные недопустимого формата"
+    else -> "Module returned invalid data format"
+}
+
+private fun unsupportedInterfaceVersionMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块管理接口版本不受支持"
+    "ru" -> "Версия интерфейса управления модуля не поддерживается"
+    else -> "Module management interface version is not supported"
+}
+
+private fun moduleOperationFailedMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块操作失败"
+    "ru" -> "Сбой операции модуля"
+    else -> "Module operation failed"
 }

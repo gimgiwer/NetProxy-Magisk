@@ -1,0 +1,98 @@
+{
+  "common": {
+    "service": "Service",
+    "environment": "Environment",
+    "env_ksu": "KernelSU",
+    "env_preview": "Preview",
+    "not_ksu_env": "[Non-KernelSU Environment]\nPlease open this page within KernelSU WebUI to execute commands.",
+    "webview_exit_hint": "Cannot exit from WebView, please close the page",
+    "exit_code": "Exit code: {code}",
+    "exception": "Exception: {message}",
+    "unknown_topic": "Unknown topic: {topic}\nAvailable topics: {topics}\nType help for usage.",
+    "lang_select": "Language",
+    "missing_element": "Missing page element: {id}"
+  },
+  "states": {
+    "ready": "Running",
+    "stopped": "Stopped",
+    "failed": "Failed",
+    "starting": "Starting",
+    "stopping": "Stopping",
+    "preparing": "Preparing",
+    "detecting": "Detecting"
+  },
+  "transport": {
+    "failed": "Module command failed",
+    "failed_with_code": "Module command failed (exit code {code})",
+    "invalid_json": "Invalid data format returned by module",
+    "empty": "Module returned no valid result"
+  },
+  "portal": {
+    "title": "NetProxy",
+    "subtitle": "Control Center",
+    "admin_panel": "Management Interfaces",
+    "webui_title": "NetProxy WebUI",
+    "webui_desc": "Services, nodes, and applications",
+    "dashboard_title": "sing-box Dashboard",
+    "dashboard_desc": "Core, logs, and network test",
+    "footer": "Please start the sing-box service first"
+  },
+  "help": {
+    "banner": "NetProxy Terminal\n",
+    "commands_label": "Commands:",
+    "global_options_label": "Global Options:",
+    "local_commands_label": "Local Commands:",
+    "examples_label": "Examples:",
+    "help_all_hint": "Type help all to view complete command documentation.",
+    "opt_json": "  --json                 Output schema=1 JSON",
+    "opt_timeout": "  --timeout <sec|dur>    Override default command timeout",
+    "cmd_help": "  help [topic]      Show help",
+    "cmd_clear": "  clear             Clear terminal",
+    "cmd_exit": "  exit              Show exit hint for terminal",
+    "cmd_shell": "  ! <command>       Execute Root Shell command",
+    "shell_title": "shell - WebUI Local Extension",
+    "shell_desc": "This feature is not part of netproxyctl public CLI; available only in KernelSU WebUI."
+  },
+  "commands": {
+    "service": {
+      "overview": "service <command>  Service control",
+      "help": "service - Service control\n\n  service status      View service status, uptime, and traffic\n  service start       Start sing-box service\n  service stop        Stop sing-box service\n  service restart     Restart sing-box core\n  service reload      Reload configuration\n  service check       Check service configuration\n  service toggle      Toggle service state\n\nStates: stopped / preparing / starting / ready / stopping / failed\n"
+    },
+    "catalog": {
+      "overview": "catalog <command>  Node groups",
+      "help": "catalog - Node groups\n\n  catalog list             List all node groups\n  catalog show <group>     View group details\n"
+    },
+    "node": {
+      "overview": "node <command>     Node management",
+      "help": "node - Node management\n\n  node list [group]                List nodes\n  node snapshot [group]            View runtime node snapshot\n  node current                     View current selection\n  node show <group>                View group nodes\n  node get <group>/<tag>           Get node configuration summary\n  node export <group>/<tag>        Export node link\n  node delay [target] [group]      Measure node latency\n  node delay auto <group>          Measure latency of all nodes in group\n  node add <link> [group]          Add single node link\n  node import <file>               Import node file\n  node edit <group>/<tag> <src>    Edit node\n  node remove <group>/<tag>        Remove node\n  node use auto [group]            Automatically select fastest node\n  node use <group>/<tag>           Manually select node\n"
+    },
+    "sub": {
+      "overview": "sub <command>      Subscription management",
+      "help": "sub - Subscription management\n\n  sub list                         List subscriptions\n  sub show <name>                  View subscription details\n  sub add [name] <URL>             Add subscription\n  sub edit <name>                  Edit subscription\n  sub update <name>                Update single subscription\n  sub update-all                   Update all subscriptions\n  sub activate <name>              Activate subscription group\n  sub remove <name>                Remove subscription\n  sub history <name>               View update history\n  sub cancel <name>                Cancel update task\n"
+    },
+    "mode": {
+      "overview": "mode <mode>        Outbound mode",
+      "help": "mode - Outbound mode\n\n  mode rule       Rule-based routing\n  mode global     Global proxy\n  mode direct     Global direct\n  mode AllowAds   Allow advertisement rules\n"
+    },
+    "network": {
+      "overview": "network <command>  Network policy evaluation",
+      "help": "network - Network policy\n\n  network evaluate --type <type> [--ssid <name>]\n                         Evaluate current network and apply Wi-Fi policy\n  Types: wifi / not_wifi\n"
+    },
+    "app": {
+      "overview": "app <command>      Per-app proxy",
+      "help": "app - Per-app proxy\n\n  app list                    View per-app proxy configuration\n  app mode blacklist          Use blacklist mode\n  app mode whitelist          Use whitelist mode\n  app add <uid>:<pkg>         Add app for specified user\n  app remove <uid>:<pkg>      Remove app for specified user\n  app enable                  Enable per-app proxy\n  app disable                 Disable per-app proxy\n"
+    },
+    "ebpf": {
+      "overview": "ebpf <command>     eBPF diagnostics",
+      "help": "ebpf - eBPF diagnostics\n\n  ebpf status                         View configured capabilities\n  ebpf status configured              View current configuration\n  ebpf status all                     Check all supported capabilities\n  ebpf status local                   Check local data path\n  ebpf status shared                  Check shared network data path\n  ebpf status all --raw               Output raw diagnostic information\n"
+    },
+    "config": {
+      "overview": "config <command>   Configuration management",
+      "help": "config - Configuration management\n\n  config list                         List configuration files\n  config read <target>                Read configuration\n  config check                        Check all configurations\n  config validate <target> <file>     Validate configuration\n  config apply <target> <file>        Apply configuration\n\n  Full config: singbox/config.json\n  Partition targets: singbox/dns, singbox/inbounds, singbox/route, etc.\n  Partition content preserves top-level fields, e.g. {\"dns\":{...}}; {} deletes that partition.\n  apply/validate prepends --revision <value> to target to avoid overwriting concurrent edits.\n"
+    },
+    "logs": {
+      "overview": "logs <command>     Log management",
+      "help": "logs - Log management\n\n  logs show service             View service logs\n  logs show core                View sing-box logs\n  logs clear <type>             Clear logs\n  logs export                   Export runtime configuration and sanitized logs\n"
+    }
+  }
+}

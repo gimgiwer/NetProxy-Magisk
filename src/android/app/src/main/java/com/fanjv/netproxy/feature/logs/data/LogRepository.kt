@@ -23,7 +23,7 @@ internal class LogRepository(
         return when (type) {
             LogType.SERVICE -> {
                 val entries = data["entries"]?.jsonArray
-                    ?: error("Native 日志响应缺少 entries")
+                    ?: error(missingLogEntriesMessage())
                 LogParser.parseNative(entries)
             }
 
@@ -52,13 +52,13 @@ internal class LogRepository(
             reportsDir.mkdirs()
             File(reportsDir, "NetProxy_Logs_${System.currentTimeMillis()}.tar.gz").also {
                 it.delete()
-                check(it.createNewFile()) { "无法创建诊断包临时文件" }
+                check(it.createNewFile()) { cannotCreateDiagTempFileMessage() }
             }
         }
         export(target.absolutePath)
         withContext(Dispatchers.IO) {
             if (!target.isFile || target.length() == 0L) {
-                throw IOException("诊断包导出后为空")
+                throw IOException(diagBundleEmptyMessage())
             }
         }
         return target
@@ -69,4 +69,22 @@ internal class LogRepository(
             LogType.SERVICE -> "service"
             LogType.KERNEL -> "core"
         }
+}
+
+private fun missingLogEntriesMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "Native 日志响应缺少 entries"
+    "ru" -> "В ответе журнала Native отсутствуют записи"
+    else -> "Native log response missing entries"
+}
+
+private fun cannotCreateDiagTempFileMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "无法创建诊断包临时文件"
+    "ru" -> "Не удалось создать временный файл диагностического пакета"
+    else -> "Failed to create diagnostic bundle temporary file"
+}
+
+private fun diagBundleEmptyMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "诊断包导出后为空"
+    "ru" -> "Экспортированный диагностический пакет пуст"
+    else -> "Exported diagnostic bundle is empty"
 }

@@ -62,7 +62,7 @@ internal class ConfigRepository(
                 addAll(listOf(target, source.absolutePath))
             }
             client.execute("config", *arguments.toTypedArray()).data.jsonObject["revision"]
-                ?.jsonPrimitive?.content ?: error("模块没有返回配置版本")
+                ?.jsonPrimitive?.content ?: error(noConfigVersionMessage())
         }
 
     suspend fun check() {
@@ -72,5 +72,17 @@ internal class ConfigRepository(
     suspend fun ebpfStatus(mode: String = "configured"): String =
         client.execute("ebpf", "status", mode).data.jsonObject["content"]
             ?.jsonPrimitive?.content
-            ?: error("模块没有返回 eBPF 诊断结果")
+            ?: error(noEbpfDiagMessage())
+}
+
+private fun noConfigVersionMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块没有返回配置版本"
+    "ru" -> "Модуль не вернул версию конфигурации"
+    else -> "Module did not return configuration version"
+}
+
+private fun noEbpfDiagMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "模块没有返回 eBPF 诊断结果"
+    "ru" -> "Модуль не вернул результаты диагностики eBPF"
+    else -> "Module did not return eBPF diagnostic result"
 }

@@ -59,7 +59,7 @@ internal fun GotoLineBar(
         FindField(
             value = session.input,
             onValueChange = { session.input = it.filter(Char::isDigit) },
-            placeholder = "跳转到行",
+            placeholder = GotoLineStrings.placeholder,
             colors = colors,
             modifier = Modifier
                 .weight(1f)
@@ -82,13 +82,37 @@ internal fun GotoLineBar(
             onImeSearch = { jumpAndRefocus() },
         )
         BasicText(
-            text = "共 $lineCount 行",
+            text = GotoLineStrings.lineCount(lineCount),
             style = TextStyle(color = colors.symbolBarForeground.copy(alpha = 0.75f), fontSize = 12.sp),
             maxLines = 1,
         )
-        ActionChip("跳转", colors) { jumpAndRefocus() }
+        ActionChip(GotoLineStrings.jump, colors) { jumpAndRefocus() }
         ActionChip("✕", colors) { closeAndRefocus() }
     }
     // 挂载后聚焦输入框（初值为当前行号、挂载态全选：直接键入即覆盖）。
     LaunchedEffect(Unit) { fieldFocus.requestFocus() }
+}
+
+private object GotoLineStrings {
+    private val lang get() = java.util.Locale.getDefault().language.lowercase()
+
+    val placeholder: String
+        get() = when (lang) {
+            "ru" -> "Перейти к строке"
+            "zh" -> "跳转到行"
+            else -> "Go to line"
+        }
+
+    fun lineCount(count: Int): String = when (lang) {
+        "ru" -> "Всего строк: $count"
+        "zh" -> "共 $count 行"
+        else -> "$count lines"
+    }
+
+    val jump: String
+        get() = when (lang) {
+            "ru" -> "Перейти"
+            "zh" -> "跳转"
+            else -> "Go"
+        }
 }

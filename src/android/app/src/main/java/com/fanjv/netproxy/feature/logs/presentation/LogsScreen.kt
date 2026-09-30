@@ -535,7 +535,7 @@ fun LogItemCard(item: LogItem, type: LogType) {
                 OutboundFlowView(flow = item.outboundFlow)
             } else {
                 Text(
-                    text = cleanMessage,
+                    text = localizeLogMessage(cleanMessage),
                     fontSize = 13.sp,
                     color = MiuixTheme.colorScheme.onSurface,
                     lineHeight = 18.sp
@@ -549,15 +549,15 @@ fun LogItemCard(item: LogItem, type: LogType) {
 fun NativeComponentBadge(component: String) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val label = when (component) {
-        "service" -> "服务"
-        "worker" -> "后台"
-        "subscription" -> "订阅"
-        "node" -> "节点"
-        "mode" -> "模式"
-        "app" -> "应用"
-        "config" -> "配置"
-        "network" -> "网络"
-        "module" -> "模块"
+        "service" -> stringResource(R.string.log_component_service)
+        "worker" -> stringResource(R.string.log_component_worker)
+        "subscription" -> stringResource(R.string.log_component_subscription)
+        "node" -> stringResource(R.string.log_component_node)
+        "mode" -> stringResource(R.string.log_component_mode)
+        "app" -> stringResource(R.string.log_component_app)
+        "config" -> stringResource(R.string.log_component_config)
+        "network" -> stringResource(R.string.log_component_network)
+        "module" -> stringResource(R.string.log_component_module)
         else -> component
     }
     NativeBadge(
@@ -571,32 +571,32 @@ fun NativeComponentBadge(component: String) {
 fun NativeEventBadge(event: String) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val label = when (event) {
-        "service.start" -> "启动"
-        "service.stop" -> "停止"
-        "service.reload" -> "重载"
-        "worker.start", "worker.run" -> "Worker"
-        "network.watch" -> "网络监听"
-        "network.read" -> "网络读取"
-        "network.policy" -> "网络策略"
-        "subscription.add" -> "添加订阅"
-        "subscription.edit" -> "编辑订阅"
-        "subscription.update" -> "更新订阅"
-        "subscription.update-all" -> "更新全部"
-        "subscription.remove" -> "删除订阅"
-        "subscription.runtime-sync" -> "运行时同步"
-        "subscription.effect" -> "订阅副作用"
-        "subscription.schedule" -> "订阅调度"
-        "node.append" -> "添加节点"
-        "node.import" -> "导入节点"
-        "node.edit" -> "编辑节点"
-        "node.remove" -> "删除节点"
-        "node.select", "node.selection" -> "选择节点"
-        "mode.apply" -> "切换模式"
-        "app-policy.update" -> "应用策略"
-        "config.apply" -> "保存配置"
-        "config.validate" -> "校验配置"
-        "module.boot" -> "开机流程"
-        "module.update" -> "模块更新"
+        "service.start" -> stringResource(R.string.log_event_service_start)
+        "service.stop" -> stringResource(R.string.log_event_service_stop)
+        "service.reload" -> stringResource(R.string.log_event_service_reload)
+        "worker.start", "worker.run" -> stringResource(R.string.log_event_worker_start)
+        "network.watch" -> stringResource(R.string.log_event_network_watch)
+        "network.read" -> stringResource(R.string.log_event_network_read)
+        "network.policy" -> stringResource(R.string.log_event_network_policy)
+        "subscription.add" -> stringResource(R.string.log_event_subscription_add)
+        "subscription.edit" -> stringResource(R.string.log_event_subscription_edit)
+        "subscription.update" -> stringResource(R.string.log_event_subscription_update)
+        "subscription.update-all" -> stringResource(R.string.log_event_subscription_update_all)
+        "subscription.remove" -> stringResource(R.string.log_event_subscription_remove)
+        "subscription.runtime-sync" -> stringResource(R.string.log_event_subscription_runtime_sync)
+        "subscription.effect" -> stringResource(R.string.log_event_subscription_effect)
+        "subscription.schedule" -> stringResource(R.string.log_event_subscription_schedule)
+        "node.append" -> stringResource(R.string.log_event_node_append)
+        "node.import" -> stringResource(R.string.log_event_node_import)
+        "node.edit" -> stringResource(R.string.log_event_node_edit)
+        "node.remove" -> stringResource(R.string.log_event_node_remove)
+        "node.select", "node.selection" -> stringResource(R.string.log_event_node_select)
+        "mode.apply" -> stringResource(R.string.log_event_mode_apply)
+        "app-policy.update" -> stringResource(R.string.log_event_app_policy_update)
+        "config.apply" -> stringResource(R.string.log_event_config_apply)
+        "config.validate" -> stringResource(R.string.log_event_config_validate)
+        "module.boot" -> stringResource(R.string.log_event_module_boot)
+        "module.update" -> stringResource(R.string.log_event_module_update)
         else -> event
     }
     NativeBadge(
@@ -609,28 +609,37 @@ fun NativeEventBadge(event: String) {
 @Composable
 fun NativeResultBadge(result: String) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val successText = stringResource(R.string.log_result_success)
+    val failedText = stringResource(R.string.log_result_failed)
+    val persistedText = stringResource(R.string.log_result_persisted)
+    val fallbackText = stringResource(R.string.log_result_fallback)
+    val startedText = stringResource(R.string.log_result_started)
+    val alreadyRunningText = stringResource(R.string.log_result_already_running)
+    val stoppedText = stringResource(R.string.log_result_stopped)
+    val skippedText = stringResource(R.string.log_result_skipped)
+
     val (label, backgroundColor, textColor) = when (result) {
         "success", "recovered" -> if (isDark) {
-            Triple("成功", Color(0xFF1B5E20).copy(alpha = 0.3f), Color(0xFF81C784))
+            Triple(successText, Color(0xFF1B5E20).copy(alpha = 0.3f), Color(0xFF81C784))
         } else {
-            Triple("成功", Color(0xFFE8F5E9), Color(0xFF2E7D32))
+            Triple(successText, Color(0xFFE8F5E9), Color(0xFF2E7D32))
         }
 
         "failed", "forced" -> if (isDark) {
-            Triple("失败", Color(0xFFB71C1C).copy(alpha = 0.3f), Color(0xFFE57373))
+            Triple(failedText, Color(0xFFB71C1C).copy(alpha = 0.3f), Color(0xFFE57373))
         } else {
-            Triple("失败", Color(0xFFFFEBEE), Color(0xFFC62828))
+            Triple(failedText, Color(0xFFFFEBEE), Color(0xFFC62828))
         }
 
         "persisted", "fallback" -> if (isDark) {
             Triple(
-                if (result == "persisted") "已保存" else "已回退",
+                if (result == "persisted") persistedText else fallbackText,
                 Color(0xFFE65100).copy(alpha = 0.3f),
                 Color(0xFFFFB74D)
             )
         } else {
             Triple(
-                if (result == "persisted") "已保存" else "已回退",
+                if (result == "persisted") persistedText else fallbackText,
                 Color(0xFFFFF3E0),
                 Color(0xFFE65100)
             )
@@ -638,13 +647,13 @@ fun NativeResultBadge(result: String) {
 
         "started", "already-running" -> if (isDark) {
             Triple(
-                if (result == "started") "进行中" else "已运行",
+                if (result == "started") startedText else alreadyRunningText,
                 Color(0xFF0D47A1).copy(alpha = 0.3f),
                 Color(0xFF64B5F6)
             )
         } else {
             Triple(
-                if (result == "started") "进行中" else "已运行",
+                if (result == "started") startedText else alreadyRunningText,
                 Color(0xFFE3F2FD),
                 Color(0xFF1976D2)
             )
@@ -652,13 +661,13 @@ fun NativeResultBadge(result: String) {
 
         "stopped", "skipped" -> if (isDark) {
             Triple(
-                if (result == "stopped") "已停止" else "已跳过",
+                if (result == "stopped") stoppedText else skippedText,
                 Color(0xFF37474F).copy(alpha = 0.3f),
                 Color(0xFFB0BEC5)
             )
         } else {
             Triple(
-                if (result == "stopped") "已停止" else "已跳过",
+                if (result == "stopped") stoppedText else skippedText,
                 Color(0xFFF5F5F5),
                 Color(0xFF616161)
             )
@@ -927,4 +936,154 @@ fun RawLogsCard(logs: List<LogItem>) {
             }
         }
     }
+}
+
+fun localizeLogMessage(message: String): String {
+    val lang = java.util.Locale.getDefault().language.lowercase()
+    if (lang == "zh") return message
+    return if (lang == "ru") translateLogRu(message) else translateLogEn(message)
+}
+
+fun translateLogRu(msg: String): String {
+    var result = msg
+    val exactMatches = mapOf(
+        "节点选择" to "Выбор узла",
+        "出站模式切换" to "Переключение режима маршрутизации",
+        "分应用策略更新" to "Обновление правил приложений",
+        "节点添加" to "Добавление узла",
+        "节点导入" to "Импорт узлов",
+        "节点编辑" to "Редактирование узла",
+        "节点删除" to "Удаление узла",
+        "订阅删除" to "Удаление подписки",
+        "订阅添加" to "Добавление подписки",
+        "订阅更新" to "Обновление подписки",
+        "订阅编辑" to "Редактирование подписки",
+        "全部订阅更新" to "Обновление всех подписок",
+        "启动 sing-box 服务" to "Запуск службы sing-box",
+        "sing-box 服务已停止" to "Служба sing-box остановлена",
+        "停止 sing-box 服务" to "Остановка службы sing-box",
+        "重新加载 sing-box 配置" to "Перезагрузка конфигурации sing-box",
+        "sing-box 配置重新加载完成" to "Конфигурация sing-box успешно перезагружена",
+        "NetProxy 开机服务启动" to "Запуск службы NetProxy при загрузке",
+        "等待 Android 启动完成" to "Ожидание завершения загрузки Android",
+        "Android 启动完成" to "Загрузка Android завершена",
+        "开机自启动已禁用，跳过启动" to "Автозапуск при загрузке отключён, запуск пропущен",
+        "开机服务流程结束" to "Процесс автозапуска при загрузке завершён",
+        "sing-box 未在限定时间内退出，改用 SIGKILL" to "sing-box не завершился вовремя, принудительное завершение через SIGKILL",
+        "已存在服务操作正在执行" to "Другая операция со службой уже выполняется",
+        "已有服务操作正在执行" to "Другая операция со службой уже выполняется",
+        "服务未运行" to "Служба не запущена",
+        "服务正在运行" to "Служба запущена",
+        "目标分组没有可用节点" to "В целевой группе нет доступных узлов",
+        "订阅中没有可用节点" to "В подписке нет доступных узлов",
+        "配置验证失败" to "Ошибка проверки конфигурации",
+        "读取状态失败" to "Не удалось прочитать статус",
+        "网络策略更新" to "Обновление сетевой политики",
+        "配置导出" to "Экспорт конфигурации",
+        "配置导入" to "Импорт конфигурации",
+        "配置重置" to "Сброс конфигурации",
+        "配置备份" to "Резервное копирование конфигурации",
+        "配置恢复" to "Восстановление конфигурации"
+    )
+    exactMatches[result.trim()]?.let { return it }
+
+    val patterns = listOf(
+        "分应用代理跳过未安装应用:\\s*(.*)".toRegex() to "Прокси приложений: пропуск неустановленного пакета: $1",
+        "sing-box 已在运行 \\(PID:\\s*(\\d+)\\)".toRegex() to "sing-box уже запущен (PID: $1)",
+        "sing-box 服务启动完成 \\(PID:\\s*(\\d+)\\)".toRegex() to "Служба sing-box успешно запущена (PID: $1)",
+        "sing-box 服务启动完成".toRegex() to "Служба sing-box успешно запущена",
+        "后台 Worker 启动失败:\\s*(.*)".toRegex() to "Сбой запуска фонового воркера: $1",
+        "后台 Worker 启动失败，可稍后手动重试:\\s*(.*)".toRegex() to "Сбой запуска фонового воркера, повторите попытку позже: $1",
+        "代理服务开机启动失败，可在导入节点或修正配置后手动启动:\\s*(.*)".toRegex() to "Сбой автозапуска прокси при загрузке: $1",
+        "sing-box 原位重新加载失败:\\s*(.*)".toRegex() to "Сбой перезагрузки sing-box на месте: $1",
+        "未找到节点:\\s*(.*)".toRegex() to "Узел не найден: $1",
+        "读取分组\\s+(.*?)\\s+元数据失败:\\s*(.*)".toRegex() to "Не удалось прочитать метаданные группы $1: $2",
+        "活动分组不存在:\\s*(.*)".toRegex() to "Активная группа не существует: $1",
+        "读取活动分组\\s+(.*?)\\s+Provider 失败:\\s*(.*)".toRegex() to "Не удалось прочитать провайдер группы $1: $2"
+    )
+    for ((regex, replacement) in patterns) {
+        if (regex.containsMatchIn(result)) {
+            result = regex.replace(result, replacement)
+        }
+    }
+
+    result = result
+        .replace("本地配置", "Локальная конфигурация")
+        .replace("成功", "Успешно")
+        .replace("失败", "Ошибка")
+        .replace("已取消", "Отменено")
+
+    return result
+}
+
+fun translateLogEn(msg: String): String {
+    var result = msg
+    val exactMatches = mapOf(
+        "节点选择" to "Node selection",
+        "出站模式切换" to "Outbound mode switch",
+        "分应用策略更新" to "Per-app policy update",
+        "节点添加" to "Node addition",
+        "节点导入" to "Node import",
+        "节点编辑" to "Node edit",
+        "节点删除" to "Node deletion",
+        "订阅删除" to "Subscription deletion",
+        "订阅添加" to "Subscription addition",
+        "订阅更新" to "Subscription update",
+        "订阅编辑" to "Subscription edit",
+        "全部订阅更新" to "Update all subscriptions",
+        "启动 sing-box 服务" to "Starting sing-box service",
+        "sing-box 服务已停止" to "sing-box service stopped",
+        "停止 sing-box 服务" to "Stopping sing-box service",
+        "重新加载 sing-box 配置" to "Reloading sing-box configuration",
+        "sing-box 配置重新加载完成" to "sing-box configuration reloaded",
+        "NetProxy 开机服务启动" to "NetProxy boot service started",
+        "等待 Android 启动完成" to "Waiting for Android boot to complete",
+        "Android 启动完成" to "Android boot completed",
+        "开机自启动已禁用，跳过启动" to "Boot start is disabled; skipping",
+        "开机服务流程结束" to "Boot service process finished",
+        "sing-box 未在限定时间内退出，改用 SIGKILL" to "sing-box did not exit within timeout; using SIGKILL",
+        "已存在服务操作正在执行" to "Another service operation is already in progress",
+        "已有服务操作正在执行" to "Another service operation is already in progress",
+        "服务未运行" to "Service is not running",
+        "服务正在运行" to "Service is running",
+        "目标分组没有可用节点" to "Target group has no available nodes",
+        "订阅中没有可用节点" to "No available nodes in subscription",
+        "配置验证失败" to "Configuration validation failed",
+        "读取状态失败" to "Failed to read status",
+        "网络策略更新" to "Network policy update",
+        "配置导出" to "Config export",
+        "配置导入" to "Config import",
+        "配置重置" to "Config reset",
+        "配置备份" to "Config backup",
+        "配置恢复" to "Config restore"
+    )
+    exactMatches[result.trim()]?.let { return it }
+
+    val patterns = listOf(
+        "分应用代理跳过未安装应用:\\s*(.*)".toRegex() to "Per-app proxy skipped uninstalled package: $1",
+        "sing-box 已在运行 \\(PID:\\s*(\\d+)\\)".toRegex() to "sing-box is already running (PID: $1)",
+        "sing-box 服务启动完成 \\(PID:\\s*(\\d+)\\)".toRegex() to "sing-box service started (PID: $1)",
+        "sing-box 服务启动完成".toRegex() to "sing-box service started",
+        "后台 Worker 启动失败:\\s*(.*)".toRegex() to "Background worker start failed: $1",
+        "后台 Worker 启动失败，可稍后手动重试:\\s*(.*)".toRegex() to "Background worker start failed; retry manually later: $1",
+        "代理服务开机启动失败，可在导入节点或修正配置后手动启动:\\s*(.*)".toRegex() to "Proxy boot start failed: $1",
+        "sing-box 原位重新加载失败:\\s*(.*)".toRegex() to "sing-box in-place reload failed: $1",
+        "未找到节点:\\s*(.*)".toRegex() to "Node not found: $1",
+        "读取分组\\s+(.*?)\\s+元数据失败:\\s*(.*)".toRegex() to "Failed to read group $1 metadata: $2",
+        "活动分组不存在:\\s*(.*)".toRegex() to "Active group does not exist: $1",
+        "读取活动分组\\s+(.*?)\\s+Provider 失败:\\s*(.*)".toRegex() to "Failed to read provider for group $1: $2"
+    )
+    for ((regex, replacement) in patterns) {
+        if (regex.containsMatchIn(result)) {
+            result = regex.replace(result, replacement)
+        }
+    }
+
+    result = result
+        .replace("本地配置", "Local Configuration")
+        .replace("成功", "Success")
+        .replace("失败", "Failed")
+        .replace("已取消", "Cancelled")
+
+    return result
 }

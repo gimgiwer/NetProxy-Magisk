@@ -28,15 +28,28 @@ data class SingBoxSchemaContextHelp(
 /** 使用应用内置 sing-box Schema 提供字段名、枚举值和约束说明，不访问网络。 */
 class SingBoxSchemaCompletionProvider private constructor(
     private val schemaProvider: () -> String,
+    private val strings: SingBoxSchemaStrings,
 ) : CompletionProvider {
-    constructor(context: Context) : this({
-        context.assets.open(SCHEMA_ASSET).bufferedReader().use { it.readText() }
-    })
+    constructor(context: Context) : this(
+        { context.assets.open(SCHEMA_ASSET).bufferedReader().use { it.readText() } },
+        SingBoxSchemaStrings.forContext(context),
+    )
 
-    internal constructor(schemaContent: String) : this({ schemaContent })
+    internal constructor(schemaContent: String) : this(
+        { schemaContent },
+        SingBoxSchemaStrings.ZH,
+    )
+
+    internal constructor(schemaContent: String, strings: SingBoxSchemaStrings) : this(
+        { schemaContent },
+        strings,
+    )
 
     private val navigator by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        SchemaNavigator(singBoxSchemaJson.parseToJsonElement(schemaProvider()).jsonObject)
+        SchemaNavigator(
+            singBoxSchemaJson.parseToJsonElement(schemaProvider()).jsonObject,
+            strings,
+        )
     }
 
     override suspend fun complete(request: CompletionRequest): CompletionResult? =
@@ -113,7 +126,15 @@ class SingBoxSchemaCompletionProvider private constructor(
                     insertText = if (context.quoted) field.name else "${JsonPrimitive(field.name)}: ",
                     detail = buildString {
                         append(field.typeLabel)
-                        if (field.required) append(" · 必填")
+                        if (field.required) {
+                            append(
+                                when (strings) {
+                                    SingBoxSchemaStrings.RU -> " · Обязательное"
+                                    SingBoxSchemaStrings.EN -> " · Required"
+                                    else -> " · 必填"
+                                }
+                            )
+                        }
                     },
                     documentation = field.documentation,
                     kind = CompletionItemKind.Property,
@@ -147,7 +168,7 @@ class SingBoxSchemaCompletionProvider private constructor(
                     } else {
                         value.toString()
                     },
-                    detail = valueTypeLabel(value),
+                    detail = valueTypeLabel(value, strings),
                     documentation = valueSchema.documentation,
                     kind = CompletionItemKind.Value,
                 )
@@ -162,7 +183,7 @@ class SingBoxSchemaCompletionProvider private constructor(
                     CompletionItem(
                         label = template.label,
                         insertText = template.value.toString(),
-                        detail = "配置片段",
+                        detail = strings.configSnippet,
                         documentation = template.documentation,
                         kind = CompletionItemKind.Keyword,
                     )
@@ -520,7 +541,10 @@ private data class SchemaTemplate(
 )
 
 /** 只解析本地 $ref；内置 Schema 不包含远程引用。 */
-private class SchemaNavigator(private val root: JsonObject) {
+private class SchemaNavigator(
+    private val root: JsonObject,
+    private val strings: SingBoxSchemaStrings,
+) {
     private val references = SingBoxSchemaReferenceResolver(root)
     fun properties(
         path: List<JsonPathSegment>,
@@ -541,10 +565,16 @@ private class SchemaNavigator(private val root: JsonObject) {
             val schemas = values.distinct()
             SchemaField(
                 name = name,
-                typeLabel = schemaTypes(schemas).joinToString(" | ").ifBlank { "任意" },
+                typeLabel = schemaTypes(schemas).joinToString(" | ").ifBlank {
+                    when (strings) {
+                        SingBoxSchemaStrings.RU -> "любой"
+                        SingBoxSchemaStrings.EN -> "any"
+                        else -> "任意"
+                    }
+                },
                 required = name in required,
                 documentation = combineDocumentation(
-                    commonFieldDocumentation(name),
+                    strings.fieldDocumentation(name),
                     schemaDocumentation(schemas, name in required),
                 ),
             )
@@ -558,7 +588,8 @@ private class SchemaNavigator(private val root: JsonObject) {
         val schemas = schemasAt(path, discriminators)
         val values = linkedMapOf<String, JsonElement>()
         schemas.forEach { collectValues(it, values) }
-        if (values.isEmpty() && "布尔值" in schemaTypes(schemas)) {
+        val booleanType = strings.localizedType("boolean")
+        if (values.isEmpty() && (booleanType in schemaTypes(schemas) || "boolean" in schemaTypes(schemas) || "布尔值" in schemaTypes(schemas))) {
             listOf(JsonPrimitive(true), JsonPrimitive(false)).forEach { values[it.toString()] = it }
         }
         return SchemaValue(
@@ -566,7 +597,7 @@ private class SchemaNavigator(private val root: JsonObject) {
             templates = objectTemplates(schemas),
             documentation = combineDocumentation(
                 (path.lastOrNull() as? JsonPathSegment.Property)?.name
-                    ?.let(::commonFieldDocumentation),
+                    ?.let(strings::fieldDocumentation),
                 schemaDocumentation(schemas, required = false),
             ),
         )
@@ -587,7 +618,7 @@ private class SchemaNavigator(private val root: JsonObject) {
                     label = "$labelValue $key",
                     value = JsonObject(mapOf(key to value)),
                     documentation = combineDocumentation(
-                        commonFieldDocumentation(key),
+                        strings.fieldDocumentation(key),
                         schemaDocumentation(listOf(branch), required = false),
                     ),
                 )
@@ -772,14 +803,14 @@ private class SchemaNavigator(private val root: JsonObject) {
     ) {
         if (depth > MAX_SCHEMA_DEPTH) return
         when (val type = schema["type"]) {
-            is JsonPrimitive -> type.contentOrNull?.let { result += localizedType(it) }
+            is JsonPrimitive -> type.contentOrNull?.let { result += strings.localizedType(it) }
             is JsonArray -> type.forEach {
-                it.asPrimitive()?.contentOrNull?.let { raw -> result += localizedType(raw) }
+                it.asPrimitive()?.contentOrNull?.let { raw -> result += strings.localizedType(raw) }
             }
 
             else -> Unit
         }
-        schema["const"]?.let { result += valueTypeLabel(it) }
+        schema["const"]?.let { result += valueTypeLabel(it, strings) }
         referencedSchema(schema, visitedRefs)?.let { (ref, target) ->
             collectSchemaTypes(target, result, visitedRefs + ref, depth + 1)
         }
@@ -792,7 +823,13 @@ private class SchemaNavigator(private val root: JsonObject) {
 
     private fun schemaDocumentation(schemas: List<JsonObject>, required: Boolean): String? {
         val parts = linkedSetOf<String>()
-        if (required) parts += "必填字段。"
+        if (required) {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Обязательное поле."
+                SingBoxSchemaStrings.EN -> "Required field."
+                else -> "必填字段。"
+            }
+        }
         schemas.forEach { collectSchemaDocumentation(it, parts) }
         return parts.joinToString(" ").ifBlank { null }
     }
@@ -806,14 +843,49 @@ private class SchemaNavigator(private val root: JsonObject) {
         if (depth > MAX_SCHEMA_DEPTH) return
         schema["description"]?.asPrimitive()?.contentOrNull?.takeIf(String::isNotBlank)
             ?.let(parts::add)
-        schema["default"]?.let { parts += "默认值：$it。" }
-        schema["enum"]?.asArray()?.takeIf { it.isNotEmpty() }?.let { values ->
-            parts += "可选值：${values.joinToString { valueLabel(it) }}。"
+        schema["default"]?.let {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "По умолчанию: $it."
+                SingBoxSchemaStrings.EN -> "Default: $it."
+                else -> "默认值：$it。"
+            }
         }
-        schema["minimum"]?.let { parts += "最小值：$it。" }
-        schema["maximum"]?.let { parts += "最大值：$it。" }
-        schema["pattern"]?.asPrimitive()?.contentOrNull?.let { parts += "格式：$it。" }
-        schema["x-tag-reference"]?.asPrimitive()?.contentOrNull?.let { parts += "引用 $it 标签。" }
+        schema["enum"]?.asArray()?.takeIf { it.isNotEmpty() }?.let { values ->
+            val list = values.joinToString { valueLabel(it) }
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Возможные значения: $list."
+                SingBoxSchemaStrings.EN -> "Allowed values: $list."
+                else -> "可选值：$list。"
+            }
+        }
+        schema["minimum"]?.let {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Минимальное значение: $it."
+                SingBoxSchemaStrings.EN -> "Minimum: $it."
+                else -> "最小值：$it。"
+            }
+        }
+        schema["maximum"]?.let {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Максимальное значение: $it."
+                SingBoxSchemaStrings.EN -> "Maximum: $it."
+                else -> "最大值：$it。"
+            }
+        }
+        schema["pattern"]?.asPrimitive()?.contentOrNull?.let {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Формат: $it."
+                SingBoxSchemaStrings.EN -> "Format: $it."
+                else -> "格式：$it。"
+            }
+        }
+        schema["x-tag-reference"]?.asPrimitive()?.contentOrNull?.let {
+            parts += when (strings) {
+                SingBoxSchemaStrings.RU -> "Ссылка на тег $it."
+                SingBoxSchemaStrings.EN -> "References tag $it."
+                else -> "引用 $it 标签。"
+            }
+        }
         referencedSchema(schema, visitedRefs)?.let { (ref, target) ->
             collectSchemaDocumentation(target, parts, visitedRefs + ref, depth + 1)
         }
@@ -862,26 +934,15 @@ private class SchemaNavigator(private val root: JsonObject) {
     }
 }
 
-private fun valueTypeLabel(value: JsonElement): String = when (value) {
-    is JsonObject -> "对象"
-    is JsonArray -> "数组"
+private fun valueTypeLabel(value: JsonElement, strings: SingBoxSchemaStrings): String = when (value) {
+    is JsonObject -> strings.localizedType("object")
+    is JsonArray -> strings.localizedType("array")
     is JsonPrimitive -> when {
-        value.isString -> "字符串"
-        value.booleanOrNull != null -> "布尔值"
-        value.contentOrNull == "null" -> "空值"
-        else -> "数字"
+        value.isString -> strings.localizedType("string")
+        value.booleanOrNull != null -> strings.localizedType("boolean")
+        value.contentOrNull == "null" -> strings.localizedType("null")
+        else -> strings.localizedType("number")
     }
-}
-
-private fun localizedType(type: String): String = when (type) {
-    "string" -> "字符串"
-    "integer" -> "整数"
-    "number" -> "数字"
-    "boolean" -> "布尔值"
-    "object" -> "对象"
-    "array" -> "数组"
-    "null" -> "空值"
-    else -> type
 }
 
 private fun valueLabel(value: JsonElement): String =
@@ -904,29 +965,6 @@ private fun combineDocumentation(vararg values: String?): String? = values
     .distinct()
     .joinToString(" ")
     .ifBlank { null }
-
-private fun commonFieldDocumentation(name: String): String? = when (name) {
-    "type" -> "配置对象的类型；选择后，补全列表会只显示该类型支持的字段。"
-    "tag" -> "该对象的唯一名称，供其他配置通过标签引用。"
-    "enabled" -> "控制当前功能是否启用。"
-    "server" -> "远程服务器地址，可以是域名或 IP 地址。"
-    "server_port" -> "远程服务器端口。"
-    "listen" -> "本地监听地址。"
-    "listen_port" -> "本地监听端口。"
-    "outbound" -> "命中后使用的出站标签。"
-    "default_domain_resolver" -> "解析服务器域名时使用的 DNS 服务器标签。"
-    "rule_set" -> "匹配一个或多个规则集标签。"
-    "rules" -> "按顺序匹配的规则列表。"
-    "action" -> "规则命中后执行的动作。"
-    "servers" -> "当前组包含的服务器或成员标签。"
-    "url" -> "下载、健康检查或延迟测试使用的 URL。"
-    "interval" -> "自动更新或测试的时间间隔，例如 3m、1h。"
-    "path" -> "本地文件或资源路径。"
-    "initial_path" -> "首次启动时使用的本地资源路径。"
-    "http_client" -> "执行远程请求时使用的 HTTP Client 标签。"
-    "secret" -> "访问控制接口时使用的鉴权密钥。"
-    else -> null
-}
 
 private fun JsonElement.asObject(): JsonObject? = this as? JsonObject
 private fun JsonElement.asArray(): JsonArray? = this as? JsonArray

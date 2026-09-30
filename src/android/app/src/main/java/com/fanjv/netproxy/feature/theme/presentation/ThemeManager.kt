@@ -31,6 +31,7 @@ class ThemeManager(prefs: SharedPreferences) {
                 enablePredictiveBack = p.enablePredictiveBack,
                 enableSmoothCorner = p.enableSmoothCorner,
                 pageScale = p.pageScale,
+                appLanguage = p.appLanguage,
                 monetPureBlack = p.monetPureBlack,
             )
         )
@@ -45,6 +46,11 @@ class ThemeManager(prefs: SharedPreferences) {
     fun setMiuixMonet(enabled: Boolean) {
         val newMode = store.setMiuixMonet(enabled, _state.value.colorMode)
         _state.update { it.copy(miuixMonet = enabled, colorMode = newMode) }
+    }
+
+    fun setMonetPureBlack(enabled: Boolean) {
+        store.setMonetPureBlack(enabled)
+        _state.update { it.copy(monetPureBlack = enabled) }
     }
 
     fun setKeyColor(color: Int) {
@@ -82,9 +88,8 @@ class ThemeManager(prefs: SharedPreferences) {
         _state.update { it.copy(pageScale = scale) }
     }
 
-    fun setMonetPureBlack(enabled: Boolean) {
-        store.setMonetPureBlack(enabled)
-        _state.update { it.copy(monetPureBlack = enabled) }
+    fun setAppLanguage(language: String) {
+        store.setAppLanguage(language)
+        _state.update { it.copy(appLanguage = language) }
     }
 }
-

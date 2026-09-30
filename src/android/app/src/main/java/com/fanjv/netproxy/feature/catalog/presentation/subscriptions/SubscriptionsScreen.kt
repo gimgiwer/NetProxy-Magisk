@@ -238,8 +238,13 @@ private fun CatalogGroupCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val displayName = if (group.id == "default" || group.name == "本地配置") {
+                stringResource(R.string.node_local_config)
+            } else {
+                group.name
+            }
             Text(
-                text = group.name,
+                text = displayName,
                 modifier = Modifier.weight(1f),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -369,7 +374,12 @@ private fun CatalogGroupCard(
         onDismissRequest = { showDeleteDialog = false }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.subscription_delete_message, group.name))
+            val groupDisplayName = if (group.id == "default" || group.name == "本地配置") {
+                stringResource(R.string.node_local_config)
+            } else {
+                group.name
+            }
+            Text(stringResource(R.string.subscription_delete_message, groupDisplayName))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
                     text = stringResource(R.string.common_cancel),
@@ -941,8 +951,13 @@ private fun SubscriptionSummaryCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                val displayName = if (subscription.id == "default" || subscription.name == "本地配置") {
+                    stringResource(R.string.node_local_config)
+                } else {
+                    subscription.name
+                }
                 Text(
-                    text = subscription.name,
+                    text = displayName,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)

@@ -177,6 +177,34 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
 }
 .bar-status:active { background: var(--hover) }
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lang-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font: 500 11px/1.4 var(--font-mono);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.lang-select:hover,
+.lang-select:focus-visible {
+  color: var(--text);
+  border-color: var(--text-faint);
+  background: #ffffff14;
+}
+.lang-select option {
+  background: var(--surface);
+  color: var(--text);
+}
 
 @media (max-width: 480px) {
   html, body, #root { font-size: 12px }

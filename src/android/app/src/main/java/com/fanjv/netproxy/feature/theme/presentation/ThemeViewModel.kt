@@ -12,6 +12,7 @@ internal class ThemeViewModel(
 
     fun setThemeMode(mode: Int) = manager.setThemeMode(mode)
     fun setMiuixMonet(enabled: Boolean) = manager.setMiuixMonet(enabled)
+    fun setMonetPureBlack(enabled: Boolean) = manager.setMonetPureBlack(enabled)
     fun setKeyColor(color: Int) = manager.setKeyColor(color)
     fun setColorStyle(style: String) = manager.setColorStyle(style)
     fun setColorSpec(spec: String) = manager.setColorSpec(spec)
@@ -19,6 +20,5 @@ internal class ThemeViewModel(
     fun setEnablePredictiveBack(enabled: Boolean) = manager.setEnablePredictiveBack(enabled)
     fun setEnableSmoothCorner(enabled: Boolean) = manager.setEnableSmoothCorner(enabled)
     fun setPageScale(scale: Float) = manager.setPageScale(scale)
-    fun setMonetPureBlack(enabled: Boolean) = manager.setMonetPureBlack(enabled)
+    fun setAppLanguage(language: String) = manager.setAppLanguage(language)
 }
-

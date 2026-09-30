@@ -90,13 +90,13 @@ private class JsonSourceIndexer(
             skipWhitespace()
             val key = consumeString()
             skipWhitespace()
-            require(consumeIf(':')) { "对象字段缺少冒号" }
+            require(consumeIf(':')) { jsonSyntaxError("missing_colon") }
             parseValue("$path/${escapePointerSegment(key)}")
             skipWhitespace()
             if (consumeIf('}')) return
-            require(consumeIf(',')) { "对象字段缺少逗号" }
+            require(consumeIf(',')) { jsonSyntaxError("missing_comma_prop") }
         }
-        error("对象未闭合")
+        error(jsonSyntaxError("object_not_closed"))
     }
 
     private fun parseArray(path: String) {
@@ -110,14 +110,14 @@ private class JsonSourceIndexer(
             itemIndex++
             skipWhitespace()
             if (consumeIf(']')) return
-            require(consumeIf(',')) { "数组元素缺少逗号" }
+            require(consumeIf(',')) { jsonSyntaxError("missing_comma_elem") }
         }
-        error("数组未闭合")
+        error(jsonSyntaxError("array_not_closed"))
     }
 
     private fun consumeString(): String {
         val start = index
-        require(consumeIf('"')) { "字符串应以引号开始" }
+        require(consumeIf('"')) { jsonSyntaxError("string_quote_start") }
         var escaped = false
         while (index < text.length) {
             val current = text[index++]
@@ -128,7 +128,7 @@ private class JsonSourceIndexer(
             escaped = !escaped && current == '\\'
             if (current != '\\') escaped = false
         }
-        error("字符串未闭合")
+        error(jsonSyntaxError("string_not_closed"))
     }
 
     private fun consumePrimitive() {
@@ -136,7 +136,7 @@ private class JsonSourceIndexer(
         while (index < text.length && text[index] !in ",]}" && !text[index].isWhitespace()) {
             index++
         }
-        require(index > start) { "缺少 JSON 值" }
+        require(index > start) { jsonSyntaxError("missing_json_val") }
     }
 
     private fun skipWhitespace() {
@@ -154,3 +154,50 @@ private class JsonSourceIndexer(
 
 private fun escapePointerSegment(value: String): String =
     value.replace("~", "~0").replace("/", "~1")
+
+private fun jsonSyntaxError(key: String): String {
+    val lang = java.util.Locale.getDefault().language.lowercase()
+    return when (key) {
+        "missing_colon" -> when (lang) {
+            "zh" -> "对象字段缺少冒号"
+            "ru" -> "В поле объекта отсутствует двоеточие"
+            else -> "Object field missing colon"
+        }
+        "missing_comma_prop" -> when (lang) {
+            "zh" -> "对象字段缺少逗号"
+            "ru" -> "В поле объекта отсутствует запятая"
+            else -> "Object field missing comma"
+        }
+        "object_not_closed" -> when (lang) {
+            "zh" -> "对象未闭合"
+            "ru" -> "Объект не закрыт"
+            else -> "Object not closed"
+        }
+        "missing_comma_elem" -> when (lang) {
+            "zh" -> "数组元素缺少逗号"
+            "ru" -> "В элементе массива отсутствует запятая"
+            else -> "Array element missing comma"
+        }
+        "array_not_closed" -> when (lang) {
+            "zh" -> "数组未闭合"
+            "ru" -> "Массив не закрыт"
+            else -> "Array not closed"
+        }
+        "string_quote_start" -> when (lang) {
+            "zh" -> "字符串应以引号开始"
+            "ru" -> "Строка должна начинаться с кавычки"
+            else -> "String should start with quote"
+        }
+        "string_not_closed" -> when (lang) {
+            "zh" -> "字符串未闭合"
+            "ru" -> "Строка не закрыта"
+            else -> "String not closed"
+        }
+        "missing_json_val" -> when (lang) {
+            "zh" -> "缺少 JSON 值"
+            "ru" -> "Отсутствует значение JSON"
+            else -> "Missing JSON value"
+        }
+        else -> key
+    }
+}

@@ -29,6 +29,7 @@ internal class ThemePreferenceStore(
             enablePredictiveBack = prefs.getBoolean("enable_predictive_back", false),
             enableSmoothCorner = prefs.getBoolean("enable_smooth_corner", true),
             pageScale = prefs.getFloat("page_scale", 1.0f),
+            appLanguage = prefs.getString("app_language", "system") ?: "system",
             monetPureBlack = prefs.getBoolean("monet_pure_black", false)
         )
     }
@@ -65,6 +66,7 @@ internal class ThemePreferenceStore(
         prefs.edit { putBoolean("enable_smooth_corner", enabled) }
 
     fun setPageScale(scale: Float) = prefs.edit { putFloat("page_scale", scale) }
+    fun setAppLanguage(language: String) = prefs.edit { putString("app_language", language) }
 }
 
 internal data class ThemePreferencesSnapshot(
@@ -77,6 +79,6 @@ internal data class ThemePreferencesSnapshot(
     val enablePredictiveBack: Boolean,
     val enableSmoothCorner: Boolean,
     val pageScale: Float,
+    val appLanguage: String = "system",
     val monetPureBlack: Boolean = false,
 )
-

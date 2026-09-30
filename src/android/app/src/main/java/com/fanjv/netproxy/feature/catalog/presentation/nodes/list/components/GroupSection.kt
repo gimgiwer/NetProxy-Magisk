@@ -155,7 +155,7 @@ internal fun CatalogGroupList(
                 Column {
                     if (groupIndex > 0) Spacer(Modifier.height(12.dp))
                     CatalogGroupHeader(
-                        name = if (groupId == "default") {
+                        name = if (groupId == "default" || group.group.name == "本地配置") {
                             stringResource(R.string.node_local_config)
                         } else {
                             group.group.name

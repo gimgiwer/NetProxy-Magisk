@@ -294,7 +294,16 @@ internal fun shouldApplyDashboardSnapshot(
 internal fun dashboardNodeName(service: ServiceStatusSnapshot): String {
     if (service.activeGroupNodeCount <= 0) return ""
 
-    val groupName = service.activeGroupName.ifBlank { service.activeGroupId }
+    val rawGroupName = service.activeGroupName.ifBlank { service.activeGroupId }
+    val groupName = if (service.activeGroupId == "default" || rawGroupName == "本地配置") {
+        when (java.util.Locale.getDefault().language.lowercase()) {
+            "ru" -> "Локальная конфигурация"
+            "zh" -> "本地配置"
+            else -> "Local Configuration"
+        }
+    } else {
+        rawGroupName
+    }
     val automatic = service.selectorMode == "urltest"
     if (automatic) {
         val selected = if (service.state == "ready") {

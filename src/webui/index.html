@@ -26,8 +26,15 @@
           <button id="run" class="vkbtn run" type="button">↵</button>
         </div>
         <div class="bar">
-          <span id="service-status" class="bar-status">服务: <b id="service-state">检测中</b></span>
-          <span id="environment" class="dim"></span>
+          <span id="service-status" class="bar-status"><span id="service-label">Service</span>: <b id="service-state">Detecting</b></span>
+          <div class="bar-right">
+            <select id="lang-select" class="lang-select" aria-label="Language">
+              <option value="en-US">English</option>
+              <option value="ru-RU">Русский</option>
+              <option value="zh-CN">简体中文</option>
+            </select>
+            <span id="environment" class="dim"></span>
+          </div>
         </div>
       </div>
     </div>

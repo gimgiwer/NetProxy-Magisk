@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -187,6 +187,45 @@
         margin-bottom: 26px;
       }
 
+      .brand-title {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .brand-actions {
+        display: flex;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .portal-lang-select {
+        appearance: none;
+        -webkit-appearance: none;
+        background: var(--hover);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 4px 10px;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+        transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+      }
+
+      .portal-lang-select:hover,
+      .portal-lang-select:focus-visible {
+        color: var(--text);
+        border-color: var(--border-strong);
+        background: var(--accent-soft);
+      }
+
+      .portal-lang-select option {
+        background: var(--card);
+        color: var(--text);
+      }
+
       .brand-icon {
         width: 44px;
         height: 44px;
@@ -345,19 +384,26 @@
       <section class="setup-panel" aria-labelledby="page-title">
         <header class="brand">
           <img class="brand-icon" src="./netproxy/favicon.svg" alt="" />
-          <div>
+          <div class="brand-title">
             <h1 id="page-title">NetProxy</h1>
-            <p class="subtitle">控制中心</p>
+            <p class="subtitle" id="portal-subtitle">Control Center</p>
+          </div>
+          <div class="brand-actions">
+            <select id="portal-lang-select" class="portal-lang-select" aria-label="Language">
+              <option value="en-US">English</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="ru-RU">Русский</option>
+            </select>
           </div>
         </header>
 
-        <div class="section-label">管理界面</div>
-        <nav class="entry-list" aria-label="管理界面">
+        <div class="section-label" id="portal-section-label">Management Interfaces</div>
+        <nav class="entry-list" id="portal-entry-list" aria-label="Management Interfaces">
           <a class="entry" href="./netproxy/index.html#/dashboard">
             <img class="entry-icon" src="./netproxy/favicon.svg" alt="" />
             <span>
-              <span class="entry-title">NetProxy WebUI</span>
-              <span class="entry-description">服务、节点与应用</span>
+              <span class="entry-title" id="portal-entry-webui-title">NetProxy WebUI</span>
+              <span class="entry-description" id="portal-entry-webui-desc">Services, nodes, and applications</span>
             </span>
             <span class="entry-chevron" aria-hidden="true"></span>
           </a>
@@ -365,16 +411,134 @@
           <a class="entry" href="http://127.0.0.1:9090/dashboard/">
             <img class="entry-icon" src="./sing-box-dashboard/favicon.svg" alt="" />
             <span>
-              <span class="entry-title">sing-box Dashboard</span>
-              <span class="entry-description">内核、日志与网络测试</span>
+              <span class="entry-title" id="portal-entry-dash-title">sing-box Dashboard</span>
+              <span class="entry-description" id="portal-entry-dash-desc">Core, logs, and network diagnostics</span>
             </span>
             <span class="entry-chevron" aria-hidden="true"></span>
           </a>
         </nav>
 
-        <footer>请先启动 sing-box 服务</footer>
+        <footer id="portal-footer">Please start the sing-box service first</footer>
       </section>
     </main>
+    <script>
+      (function () {
+        var STORAGE_KEY = "netproxy.language";
+        var SING_BOX_STORAGE_KEY = "sing-box-dashboard.language";
+        var SING_BOX_LANG_MAP = {
+          "zh-CN": "zh-Hans",
+          "en-US": "en",
+          "ru-RU": "ru"
+        };
+
+        var LOCALES = {
+          "zh-CN": {
+            title: "NetProxy",
+            subtitle: "控制中心",
+            admin_panel: "管理界面",
+            webui_title: "NetProxy WebUI",
+            webui_desc: "服务、节点与应用",
+            dashboard_title: "sing-box Dashboard",
+            dashboard_desc: "内核、日志与网络测试",
+            footer: "请先启动 sing-box 服务"
+          },
+          "en-US": {
+            title: "NetProxy",
+            subtitle: "Control Center",
+            admin_panel: "Management Interfaces",
+            webui_title: "NetProxy WebUI",
+            webui_desc: "Services, nodes, and applications",
+            dashboard_title: "sing-box Dashboard",
+            dashboard_desc: "Core, logs, and network diagnostics",
+            footer: "Please start the sing-box service first"
+          },
+          "ru-RU": {
+            title: "NetProxy",
+            subtitle: "Центр управления",
+            admin_panel: "Панели управления",
+            webui_title: "NetProxy WebUI",
+            webui_desc: "Служба, узлы и приложения",
+            dashboard_title: "sing-box Dashboard",
+            dashboard_desc: "Ядро, журналы и диагностика сети",
+            footer: "Пожалуйста, сначала запустите службу sing-box"
+          }
+        };
+
+        function detectLocale() {
+          try {
+            var stored = localStorage.getItem(STORAGE_KEY);
+            if (stored && LOCALES[stored]) return stored;
+          } catch (_) {}
+
+          var navLangs = navigator.languages || [navigator.language];
+          for (var i = 0; i < navLangs.length; i++) {
+            var l = (navLangs[i] || "").toLowerCase();
+            if (l.indexOf("zh") === 0) return "zh-CN";
+            if (l.indexOf("ru") === 0) return "ru-RU";
+            if (l.indexOf("en") === 0) return "en-US";
+          }
+          return "en-US";
+        }
+
+        function applyLocale(locale) {
+          var dict = LOCALES[locale] || LOCALES["en-US"] || LOCALES["zh-CN"];
+          document.documentElement.lang = locale;
+
+          var subtitle = document.getElementById("portal-subtitle");
+          if (subtitle) subtitle.textContent = dict.subtitle;
+
+          var sectionLabel = document.getElementById("portal-section-label");
+          if (sectionLabel) sectionLabel.textContent = dict.admin_panel;
+
+          var entryList = document.getElementById("portal-entry-list");
+          if (entryList) entryList.setAttribute("aria-label", dict.admin_panel);
+
+          var webuiTitle = document.getElementById("portal-entry-webui-title");
+          if (webuiTitle) webuiTitle.textContent = dict.webui_title;
+
+          var webuiDesc = document.getElementById("portal-entry-webui-desc");
+          if (webuiDesc) webuiDesc.textContent = dict.webui_desc;
+
+          var dashTitle = document.getElementById("portal-entry-dash-title");
+          if (dashTitle) dashTitle.textContent = dict.dashboard_title;
+
+          var dashDesc = document.getElementById("portal-entry-dash-desc");
+          if (dashDesc) dashDesc.textContent = dict.dashboard_desc;
+
+          var footer = document.getElementById("portal-footer");
+          if (footer) footer.textContent = dict.footer;
+
+          var select = document.getElementById("portal-lang-select");
+          if (select && select.value !== locale) select.value = locale;
+
+          try {
+            localStorage.setItem(STORAGE_KEY, locale);
+            if (SING_BOX_LANG_MAP[locale]) {
+              localStorage.setItem(SING_BOX_STORAGE_KEY, SING_BOX_LANG_MAP[locale]);
+            }
+          } catch (_) {}
+        }
+
+        var currentLocale = detectLocale();
+
+        function init() {
+          applyLocale(currentLocale);
+          var select = document.getElementById("portal-lang-select");
+          if (select) {
+            select.value = currentLocale;
+            select.addEventListener("change", function () {
+              applyLocale(select.value);
+            });
+          }
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", init);
+        } else {
+          init();
+        }
+      })();
+    </script>
     <script>
       (function () {
         var port = location.port;

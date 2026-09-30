@@ -175,7 +175,10 @@ jobs:
             "$MANAGER_NAME"
 
       - name: Telegram 构建成功通知
-        if: success()
+        if: success() && env.TG_BOT_TOKEN != '' && env.TG_CHAT_ID != ''
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         uses: cbrgm/telegram-github-action@v1
         with:
           token: ${{ secrets.TG_BOT_TOKEN }}
@@ -200,6 +203,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: 失败通知
+        if: env.TG_BOT_TOKEN != '' && env.TG_CHAT_ID != ''
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         uses: cbrgm/telegram-github-action@v1
         with:
           token: ${{ secrets.TG_BOT_TOKEN }}

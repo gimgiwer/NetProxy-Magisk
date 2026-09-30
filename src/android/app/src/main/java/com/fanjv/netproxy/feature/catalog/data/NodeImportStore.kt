@@ -17,7 +17,7 @@ internal class NodeImportStore(context: Context) {
                 try {
                     contentResolver.openInputStream(uri)?.use { input ->
                         target.outputStream().use(input::copyTo)
-                    } ?: error("无法读取所选文件")
+                    } ?: error(cannotReadFileMessage())
                 } catch (error: Throwable) {
                     target.delete()
                     throw error
@@ -30,6 +30,12 @@ internal class NodeImportStore(context: Context) {
             withContext(Dispatchers.IO) { file.delete() }
         }
     }
+}
+
+private fun cannotReadFileMessage(): String = when (java.util.Locale.getDefault().language.lowercase()) {
+    "zh" -> "无法读取所选文件"
+    "ru" -> "Не удалось прочитать выбранный файл"
+    else -> "Failed to read selected file"
 }
 
 

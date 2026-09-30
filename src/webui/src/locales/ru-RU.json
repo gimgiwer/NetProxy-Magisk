@@ -1,0 +1,98 @@
+{
+  "common": {
+    "service": "Сервис",
+    "environment": "Окружение",
+    "env_ksu": "KernelSU",
+    "env_preview": "Превью",
+    "not_ksu_env": "[Среда без KernelSU]\nПожалуйста, откройте эту страницу в KernelSU WebUI для выполнения команд.",
+    "webview_exit_hint": "Невозможно выйти из WebView, закройте страницу",
+    "exit_code": "Код завершения: {code}",
+    "exception": "Исключение: {message}",
+    "unknown_topic": "Неизвестная тема: {topic}\nДоступные темы: {topics}\nВведите help для справки.",
+    "lang_select": "Язык",
+    "missing_element": "Отсутствует элемент страницы: {id}"
+  },
+  "states": {
+    "ready": "Работает",
+    "stopped": "Остановлен",
+    "failed": "Сбой запуска",
+    "starting": "Запуск",
+    "stopping": "Остановка",
+    "preparing": "Подготовка",
+    "detecting": "Проверка"
+  },
+  "transport": {
+    "failed": "Сбой команды модуля",
+    "failed_with_code": "Команда модуля завершилась сбоем (код {code})",
+    "invalid_json": "Модуль вернул неверный формат данных",
+    "empty": "Модуль не вернул действительный результат"
+  },
+  "portal": {
+    "title": "NetProxy",
+    "subtitle": "Центр управления",
+    "admin_panel": "Панели управления",
+    "webui_title": "NetProxy WebUI",
+    "webui_desc": "Служба, узлы и приложения",
+    "dashboard_title": "sing-box Dashboard",
+    "dashboard_desc": "Ядро, журналы и тест сети",
+    "footer": "Пожалуйста, сначала запустите службу sing-box"
+  },
+  "help": {
+    "banner": "NetProxy Terminal\n",
+    "commands_label": "Команды:",
+    "global_options_label": "Глобальные параметры:",
+    "local_commands_label": "Локальные команды:",
+    "examples_label": "Примеры:",
+    "help_all_hint": "Введите help all для просмотра полной справки по командам.",
+    "opt_json": "  --json                 Вывод JSON формата schema=1",
+    "opt_timeout": "  --timeout <сек|время>  Переопределить таймаут команды",
+    "cmd_help": "  help [тема]       Показать справку",
+    "cmd_clear": "  clear             Очистить терминал",
+    "cmd_exit": "  exit              Показать подсказку по выходу",
+    "cmd_shell": "  ! <команда>       Выполнить команду в Root Shell",
+    "shell_title": "shell - локальное расширение WebUI",
+    "shell_desc": "Эта функция не входит в публичный CLI netproxyctl и доступна только в KernelSU WebUI."
+  },
+  "commands": {
+    "service": {
+      "overview": "service <команда>  Управление службой",
+      "help": "service - Управление службой\n\n  service status      Посмотреть статус службы, время работы и трафик\n  service start       Запустить службу sing-box\n  service stop        Остановить службу sing-box\n  service restart     Перезапустить ядро sing-box\n  service reload      Перезагрузить конфигурацию\n  service check       Проверить конфигурацию службы\n  service toggle      Переключить состояние службы\n\nСостояния: stopped / preparing / starting / ready / stopping / failed\n"
+    },
+    "catalog": {
+      "overview": "catalog <команда>  Группы узлов",
+      "help": "catalog - Группы узлов\n\n  catalog list             Вывести список всех групп узлов\n  catalog show <группа>    Показать сведения о группе\n"
+    },
+    "node": {
+      "overview": "node <команда>     Управление узлами",
+      "help": "node - Управление узлами\n\n  node list [группа]               Вывести список узлов\n  node snapshot [группа]           Посмотреть снимок узлов во время работы\n  node current                     Посмотреть текущий выбранный узел\n  node show <группа>               Показать узлы группы\n  node get <группа>/<тег>          Получить сводку конфигурации узла\n  node export <группа>/<тег>       Экспортировать ссылку на узел\n  node delay [цель] [группа]       Измерить задержку узла\n  node delay auto <группа>         Измерить задержку всех узлов в группе\n  node add <ссылка> [группа]       Добавить ссылку на отдельный узел\n  node import <файл>               Импортировать файл узлов\n  node edit <группа>/<тег> <ист>   Редактировать узел\n  node remove <группа>/<тег>       Удалить узел\n  node use auto [группа]           Автоматически выбрать самый быстрый узел\n  node use <группа>/<тег>          Вручную выбрать узел\n"
+    },
+    "sub": {
+      "overview": "sub <команда>      Управление подписками",
+      "help": "sub - Управление подписками\n\n  sub list                         Вывести список подписок\n  sub show <имя>                   Посмотреть сведения о подписке\n  sub add [имя] <URL>              Добавить подписку\n  sub edit <имя>                   Редактировать подписку\n  sub update <имя>                 Обновить отдельную подписку\n  sub update-all                   Обновить все подписки\n  sub activate <имя>               Активировать группу подписки\n  sub remove <имя>                 Удалить подписку\n  sub history <имя>                Посмотреть историю обновлений\n  sub cancel <имя>                 Отменить задачу обновления\n"
+    },
+    "mode": {
+      "overview": "mode <режим>       Режим маршрутизации",
+      "help": "mode - Режим маршрутизации\n\n  mode rule       Маршрутизация по правилам\n  mode global     Глобальный прокси\n  mode direct     Прямое подключение\n  mode AllowAds   Разрешить правила рекламы\n"
+    },
+    "network": {
+      "overview": "network <команда>  Оценка сетевой политики",
+      "help": "network - Сетевая политика\n\n  network evaluate --type <тип> [--ssid <имя>]\n                         Оценить текущую сеть и применить политику Wi-Fi\n  Типы: wifi / not_wifi\n"
+    },
+    "app": {
+      "overview": "app <команда>      Проксирование приложений",
+      "help": "app - Проксирование приложений\n\n  app list                    Посмотреть настройки прокси для приложений\n  app mode blacklist          Использовать режим чёрного списка\n  app mode whitelist          Использовать режим белого списка\n  app add <UID>:<пакет>       Добавить приложение для указанного пользователя\n  app remove <UID>:<пакет>    Удалить приложение для указанного пользователя\n  app enable                  Включить проксирование приложений\n  app disable                 Отключить проксирование приложений\n"
+    },
+    "ebpf": {
+      "overview": "ebpf <команда>     Диагностика eBPF",
+      "help": "ebpf - Диагностика eBPF\n\n  ebpf status                         Посмотреть настроенные возможности\n  ebpf status configured              Посмотреть текущую конфигурацию\n  ebpf status all                     Проверить все поддерживаемые возможности\n  ebpf status local                   Проверить локальный тракт данных\n  ebpf status shared                  Проверить тракт данных общей сети\n  ebpf status all --raw               Вывести исходную диагностическую информацию\n"
+    },
+    "config": {
+      "overview": "config <команда>   Управление конфигурацией",
+      "help": "config - Управление конфигурацией\n\n  config list                         Вывести список конфигурационных файлов\n  config read <цель>                  Прочитать конфигурацию\n  config check                        Проверить все конфигурации\n  config validate <цель> <файл>       Проверить корректность конфигурации\n  config apply <цель> <файл>          Применить конфигурацию\n\n  Полная конфигурация: singbox/config.json\n  Целевые разделы: singbox/dns, singbox/inbounds, singbox/route и др.\n  Содержимое раздела сохраняет поля верхнего уровня, напр. {\"dns\":{...}}; {} удаляет раздел.\n  apply/validate добавляет --revision <значение> перед целью для защиты от перезаписи параллельных правок.\n"
+    },
+    "logs": {
+      "overview": "logs <команда>     Управление журналами",
+      "help": "logs - Управление журналами\n\n  logs show service             Посмотреть журнал службы\n  logs show core                Посмотреть журнал sing-box\n  logs clear <тип>              Очистить журналы\n  logs export                   Экспортировать конфигурацию времени выполнения и обезличенные журналы\n"
+    }
+  }
+}

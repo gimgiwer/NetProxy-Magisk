@@ -47,6 +47,8 @@ import com.fanjv.netproxy.feature.logs.presentation.LogsScreen
 import com.fanjv.netproxy.feature.settings.presentation.ProxySettingsScreen
 import com.fanjv.netproxy.feature.settings.presentation.SettingsScreen
 import com.fanjv.netproxy.feature.theme.presentation.ThemeSettingsScreen
+import android.content.Context
+import com.fanjv.netproxy.core.ui.LocaleHelper
 import com.fanjv.netproxy.feature.theme.presentation.ThemeViewModel
 import com.fanjv.netproxy.navigation.AppDestination
 import com.fanjv.netproxy.navigation.LocalNavigator
@@ -73,7 +75,12 @@ import top.yukonga.miuix.kmp.theme.ThemeColorSpec
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrapContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        LocaleHelper.applyLocale(this)
         setTheme(R.style.Theme_NetProxy)
         super.onCreate(savedInstanceState)
 

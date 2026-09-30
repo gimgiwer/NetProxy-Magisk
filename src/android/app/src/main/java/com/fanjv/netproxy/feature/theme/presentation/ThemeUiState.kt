@@ -15,6 +15,6 @@ data class ThemeUiState(
     val enablePredictiveBack: Boolean = false,
     val enableSmoothCorner: Boolean = true,
     val pageScale: Float = 1.0f,
+    val appLanguage: String = "system",
     val monetPureBlack: Boolean = false,
 )
-

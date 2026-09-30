@@ -6,16 +6,38 @@ import kotlin.math.roundToInt
 /** 剪贴 / 选择 / 历史的语义操作。触屏悬浮条与桌面右键菜单共用同一套动作与执行器。 */
 enum class EditorContextAction { Undo, Redo, Cut, Copy, Paste, SelectAll }
 
-/** 中文显示名（宿主 Mishka 为中文界面；如需本地化可后续经参数外露）。 */
-val EditorContextAction.zhLabel: String
-    get() = when (this) {
-        EditorContextAction.Undo -> "撤销"
-        EditorContextAction.Redo -> "重做"
-        EditorContextAction.Cut -> "剪切"
-        EditorContextAction.Copy -> "复制"
-        EditorContextAction.Paste -> "粘贴"
-        EditorContextAction.SelectAll -> "全选"
+/** 操作本地化文案（支持 ru、zh，默认 en）。 */
+val EditorContextAction.label: String
+    get() = when (java.util.Locale.getDefault().language.lowercase()) {
+        "ru" -> when (this) {
+            EditorContextAction.Undo -> "Отменить"
+            EditorContextAction.Redo -> "Повторить"
+            EditorContextAction.Cut -> "Вырезать"
+            EditorContextAction.Copy -> "Копировать"
+            EditorContextAction.Paste -> "Вставить"
+            EditorContextAction.SelectAll -> "Выбрать всё"
+        }
+        "zh" -> when (this) {
+            EditorContextAction.Undo -> "撤销"
+            EditorContextAction.Redo -> "重做"
+            EditorContextAction.Cut -> "剪切"
+            EditorContextAction.Copy -> "复制"
+            EditorContextAction.Paste -> "粘贴"
+            EditorContextAction.SelectAll -> "全选"
+        }
+        else -> when (this) {
+            EditorContextAction.Undo -> "Undo"
+            EditorContextAction.Redo -> "Redo"
+            EditorContextAction.Cut -> "Cut"
+            EditorContextAction.Copy -> "Copy"
+            EditorContextAction.Paste -> "Paste"
+            EditorContextAction.SelectAll -> "Select all"
+        }
     }
+
+/** 兼容性保留别名。 */
+val EditorContextAction.zhLabel: String
+    get() = label
 
 /**
  * 各操作在当前编辑器状态下是否「适用」。纯数据，供两种呈现各自决定隐藏（触屏悬浮条）或置灰（桌面右键）。

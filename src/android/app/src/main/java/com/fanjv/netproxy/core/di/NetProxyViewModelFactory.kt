@@ -64,7 +64,7 @@ internal class NetProxyViewModelFactory(
 
             LogsViewModel::class.java -> LogsViewModel(container.logRepository)
             ThemeViewModel::class.java -> ThemeViewModel(container.themeManager)
-            else -> error("不支持的 ViewModel: ${modelClass.name}")
+            else -> error("Unsupported ViewModel: ${modelClass.name}")
         } as T
 }
 

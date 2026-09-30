@@ -1,3 +1,5 @@
+import { t } from './i18n.ts'
+
 export const CONTRACT_SCHEMA = 1
 
 export function decodeCtlResult<T>(r: ExecResult): CtlResult<T> {
@@ -13,7 +15,7 @@ export function decodeCtlResult<T>(r: ExecResult): CtlResult<T> {
           ...result as CtlResult<T>,
           ok: false,
           code: 'transport.failed',
-          message: r.err.trim() || `模块命令失败（退出码 ${r.code}）`
+          message: r.err.trim() || t('transport.failed_with_code', { code: r.code })
         }
       }
     } catch {
@@ -26,14 +28,14 @@ export function decodeCtlResult<T>(r: ExecResult): CtlResult<T> {
       schema: CONTRACT_SCHEMA,
       ok: false,
       code: 'transport.failed',
-      message: r.err.trim() || `模块命令失败（退出码 ${r.code}）`
+      message: r.err.trim() || t('transport.failed_with_code', { code: r.code })
     }
   }
   return {
     schema: CONTRACT_SCHEMA,
     ok: false,
     code: payload ? 'transport.invalid_json' : 'transport.empty',
-    message: payload ? '模块返回的数据格式无效' : (r.err.trim() || '模块没有返回有效结果')
+    message: payload ? t('transport.invalid_json') : (r.err.trim() || t('transport.empty'))
   }
 }
 

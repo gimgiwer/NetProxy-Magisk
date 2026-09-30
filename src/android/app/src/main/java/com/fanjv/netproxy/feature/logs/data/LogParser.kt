@@ -133,7 +133,7 @@ internal object LogParser {
     }
 
     private fun Map<String, JsonElement>.requiredString(key: String): String =
-        get(key)?.jsonPrimitive?.content ?: error("Native 日志条目缺少 $key")
+        get(key)?.jsonPrimitive?.content ?: error("Native log entry missing $key")
 
     private fun parseLogLevel(levelStr: String): LogLevel {
         return when (levelStr.uppercase()) {

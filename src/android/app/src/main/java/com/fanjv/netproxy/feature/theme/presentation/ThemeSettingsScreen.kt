@@ -35,10 +35,12 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.RoundedCorner
 import androidx.compose.material.icons.rounded.Style
 import androidx.compose.material.icons.rounded.Wallpaper
+import com.fanjv.netproxy.core.ui.LocaleHelper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -392,6 +394,48 @@ internal fun ThemeSettingsScreen(
                             )
                         })
                     },
+                )
+                groupedCardItems(
+                    keyPrefix = "theme_language",
+                    outerTopPadding = 12.dp,
+                    items = listOf(
+                        CardItem("appLanguage") {
+                            val languageKeys = listOf(
+                                LocaleHelper.LANGUAGE_SYSTEM,
+                                LocaleHelper.LANGUAGE_ZH_CN,
+                                LocaleHelper.LANGUAGE_EN,
+                                LocaleHelper.LANGUAGE_RU,
+                            )
+                            val languageLabels = listOf(
+                                stringResource(R.string.settings_language_system),
+                                stringResource(R.string.settings_language_zh),
+                                stringResource(R.string.settings_language_en),
+                                stringResource(R.string.settings_language_ru),
+                            )
+                            val selectedIndex = languageKeys.indexOf(theme.appLanguage).takeIf { it >= 0 } ?: 0
+                            OverlayDropdownPreference(
+                                title = stringResource(R.string.settings_language),
+                                items = languageLabels,
+                                startAction = {
+                                    Icon(
+                                        Icons.Rounded.Language,
+                                        modifier = Modifier.padding(end = 6.dp),
+                                        contentDescription = null,
+                                        tint = colorScheme.onBackground
+                                    )
+                                },
+                                selectedIndex = selectedIndex,
+                                onSelectedIndexChange = { index ->
+                                    val chosen = languageKeys[index]
+                                    if (chosen != theme.appLanguage) {
+                                        viewModel.setAppLanguage(chosen)
+                                        LocaleHelper.persistLanguage(context, chosen)
+                                        activity?.recreate()
+                                    }
+                                }
+                            )
+                        }
+                    )
                 )
                 item {
                     Spacer(

@@ -79,7 +79,7 @@ internal fun FindReplaceBar(
             FindField(
                 value = session.query,
                 onValueChange = { session.query = it },
-                placeholder = "查找",
+                placeholder = FindReplaceStrings.findPlaceholder,
                 colors = colors,
                 // 弹性宽度：固定尺寸的计数/开关/按钮先占位，输入框吸收剩余宽度——窄屏（或大字体缩放）
                 // 下被压缩的是输入框，行尾的 ✕ 等控件在任何屏宽都可见。
@@ -108,7 +108,7 @@ internal fun FindReplaceBar(
                 maxLines = 1,
             )
             ToggleChip("Aa", session.caseSensitive, colors) { session.caseSensitive = it }
-            ToggleChip("词", session.wholeWord, colors) { session.wholeWord = it }
+            ToggleChip(FindReplaceStrings.wholeWord, session.wholeWord, colors) { session.wholeWord = it }
             ToggleChip(".*", session.useRegex, colors) { session.useRegex = it }
             ActionChip("↑", colors) { session.prev() }
             ActionChip("↓", colors) { session.next() }
@@ -119,7 +119,7 @@ internal fun FindReplaceBar(
                 FindField(
                     value = session.replacement,
                     onValueChange = { session.replacement = it },
-                    placeholder = "替换为",
+                    placeholder = FindReplaceStrings.replacePlaceholder,
                     colors = colors,
                     // 与查询框同理：弹性宽度，替换按钮恒可见。
                     modifier = Modifier.weight(1f).onPreviewKeyEvent { ev ->
@@ -138,8 +138,8 @@ internal fun FindReplaceBar(
                     },
                     onImeSearch = { session.replaceCurrent() },
                 )
-                ActionChip("替换", colors) { session.replaceCurrent() }
-                ActionChip("全部替换", colors) { session.replaceAll() }
+                ActionChip(FindReplaceStrings.replace, colors) { session.replaceCurrent() }
+                ActionChip(FindReplaceStrings.replaceAll, colors) { session.replaceAll() }
             }
         }
     }
@@ -147,10 +147,63 @@ internal fun FindReplaceBar(
     LaunchedEffect(Unit) { queryFocus.requestFocus() }
 }
 
+private object FindReplaceStrings {
+    private val lang get() = java.util.Locale.getDefault().language.lowercase()
+
+    val findPlaceholder: String
+        get() = when (lang) {
+            "ru" -> "Найти"
+            "zh" -> "查找"
+            else -> "Find"
+        }
+
+    val wholeWord: String
+        get() = when (lang) {
+            "ru" -> "Слово"
+            "zh" -> "词"
+            else -> "Word"
+        }
+
+    val replacePlaceholder: String
+        get() = when (lang) {
+            "ru" -> "Заменить на"
+            "zh" -> "替换为"
+            else -> "Replace with"
+        }
+
+    val replace: String
+        get() = when (lang) {
+            "ru" -> "Заменить"
+            "zh" -> "替换"
+            else -> "Replace"
+        }
+
+    val replaceAll: String
+        get() = when (lang) {
+            "ru" -> "Заменить всё"
+            "zh" -> "全部替换"
+            else -> "Replace all"
+        }
+
+    val invalidPattern: String
+        get() = when (lang) {
+            "ru" -> "Неверный regex"
+            "zh" -> "无效正则"
+            else -> "Invalid regex"
+        }
+
+    val noResults: String
+        get() = when (lang) {
+            "ru" -> "Нет совпадений"
+            "zh" -> "无结果"
+            else -> "No results"
+        }
+}
+
 private fun counterText(session: FindSession): String = when {
     session.query.isEmpty() -> ""
-    session.result.invalidPattern -> "无效正则"
-    session.result.matches.isEmpty() -> "无结果"
+    session.result.invalidPattern -> FindReplaceStrings.invalidPattern
+    session.result.matches.isEmpty() -> FindReplaceStrings.noResults
     else -> {
         val plus = if (session.result.limitHit) "+" else ""
         "${session.activeIndex + 1}/${session.result.matches.size}$plus"

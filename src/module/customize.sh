@@ -51,32 +51,225 @@ readonly EXECUTABLE_FILES="
 # 工具函数
 ################################################################################
 
+#######################################
+# 检测当前界面的显示语言 (zh / ru / en)。
+# 参数: 无
+# 返回: 标准输出打印语言代码，默认回退为 en。
+#######################################
+detect_locale() {
+  local raw="${NETPROXY_LANG:-}"
+  if [ -z "$raw" ] && command -v getprop > /dev/null 2>&1; then
+    raw="$(getprop persist.sys.locale 2> /dev/null)"
+    [ -n "$raw" ] || raw="$(getprop ro.product.locale 2> /dev/null)"
+    [ -n "$raw" ] || raw="$(getprop persist.sys.language 2> /dev/null)"
+    [ -n "$raw" ] || raw="$(getprop ro.product.locale.language 2> /dev/null)"
+  fi
+  case "$raw" in
+    ru*|RU*) printf 'ru\n' ;;
+    zh*|ZH*) printf 'zh\n' ;;
+    *) printf 'en\n' ;;
+  esac
+}
+
+UI_LANG="$(detect_locale)"
+
+#######################################
+# 初始化直接通过 ui_print 输出的多语言文案变量。
+# 参数: 无
+#######################################
+init_ui_messages() {
+  case "${UI_LANG:-en}" in
+    ru)
+      MSG_OPT_KEEP_DATA="[Громкость+] Сохранить существующие данные (по умолчанию)"
+      MSG_OPT_CLEAN_INSTALL="[Громкость-] Чистая установка"
+      MSG_UNKNOWN="неизвестно"
+      MSG_MGR_NOT_BUNDLED="Менеджер NetProxy не включён в этот пакет установки"
+      MSG_MGR_INSTALL_PLAY="Вы можете установить менеджер позже из Google Play"
+      MSG_MGR_ALREADY_INSTALLED="Менеджер NetProxy уже установлен"
+      MSG_MGR_CURRENT_VERSION="Текущая версия"
+      MSG_MGR_SKIP_BUNDLED="Пропуск встроенного APK во избежание перезаписи существующей установки"
+      MSG_MGR_CI_SIGNATURE="Встроенная CI-сборка использует отдельную подпись; для установки новой версии удалите старую и прошейте модуль заново"
+      MSG_MGR_UNINSTALL_NOTE="Удаление очистит локальные данные менеджера; для повседневного использования рекомендуется обновление через Google Play"
+      MSG_MGR_APK_BUNDLED="В этот пакет включён APK менеджера NetProxy"
+      MSG_OPT_INSTALL_MGR="[Громкость+] Установить (по умолчанию)"
+      MSG_OPT_SKIP_MGR="[Громкость-] Пропустить"
+      MSG_VERSION_LABEL="Версия"
+      MSG_STOP_OLD_FAILED="Не удалось безопасно остановить старый сервис, замена модуля отменена"
+      MSG_HOT_UPDATE_BG="Новая версия применяется в фоновом режиме, перезагрузка не требуется"
+      MSG_HOT_UPDATE_WAIT_1="Пожалуйста, не перезагружайте устройство в ближайшие ~3 секунды; при перезагрузке сейчас"
+      MSG_HOT_UPDATE_WAIT_2="KernelSU продолжит обновление при загрузке в стандартном режиме"
+      MSG_FAIL_CHECK_ERR="Пожалуйста, проверьте сообщения об ошибках выше"
+      MSG_FAIL_REPORT_ISSUE="и сообщите о проблеме в GitHub Issues"
+      ;;
+    zh)
+      MSG_OPT_KEEP_DATA="[音量+] 保留现有数据 (默认)"
+      MSG_OPT_CLEAN_INSTALL="[音量-] 全新安装"
+      MSG_UNKNOWN="未知"
+      MSG_MGR_NOT_BUNDLED="本安装包未随附 NetProxy 管理器"
+      MSG_MGR_INSTALL_PLAY="可稍后从 Google Play 安装管理器"
+      MSG_MGR_ALREADY_INSTALLED="已安装 NetProxy 管理器"
+      MSG_MGR_CURRENT_VERSION="当前版本"
+      MSG_MGR_SKIP_BUNDLED="为避免覆盖现有安装，跳过随附 APK"
+      MSG_MGR_CI_SIGNATURE="随附 CI 版使用独立签名；如需安装新版，请先卸载旧版并重新刷入"
+      MSG_MGR_UNINSTALL_NOTE="卸载会清除管理器本地数据，日常使用建议通过 Google Play 更新"
+      MSG_MGR_APK_BUNDLED="本包随附 NetProxy 管理器 APK"
+      MSG_OPT_INSTALL_MGR="[音量+] 安装 (默认)"
+      MSG_OPT_SKIP_MGR="[音量-] 跳过"
+      MSG_VERSION_LABEL="版本"
+      MSG_STOP_OLD_FAILED="旧服务未能安全停止，已取消模块替换"
+      MSG_HOT_UPDATE_BG="正在后台应用新版本，无需重启设备"
+      MSG_HOT_UPDATE_WAIT_1="接下来约 3 秒请不要重启；若现在重启，"
+      MSG_HOT_UPDATE_WAIT_2="KernelSU 将在开机时按标准流程继续更新"
+      MSG_FAIL_CHECK_ERR="请检查上述错误信息"
+      MSG_FAIL_REPORT_ISSUE="并在 GitHub Issues 反馈"
+      ;;
+    *)
+      MSG_OPT_KEEP_DATA="[Volume+] Keep existing data (default)"
+      MSG_OPT_CLEAN_INSTALL="[Volume-] Clean install"
+      MSG_UNKNOWN="unknown"
+      MSG_MGR_NOT_BUNDLED="NetProxy Manager is not bundled in this package"
+      MSG_MGR_INSTALL_PLAY="You can install the manager later from Google Play"
+      MSG_MGR_ALREADY_INSTALLED="NetProxy Manager is already installed"
+      MSG_MGR_CURRENT_VERSION="Current version"
+      MSG_MGR_SKIP_BUNDLED="Skipping bundled APK to avoid overwriting existing installation"
+      MSG_MGR_CI_SIGNATURE="Bundled CI build uses a separate signature; to install a new version, uninstall the old one and re-flash"
+      MSG_MGR_UNINSTALL_NOTE="Uninstalling clears local manager data; updating via Google Play is recommended for daily use"
+      MSG_MGR_APK_BUNDLED="NetProxy Manager APK is bundled in this package"
+      MSG_OPT_INSTALL_MGR="[Volume+] Install (default)"
+      MSG_OPT_SKIP_MGR="[Volume-] Skip"
+      MSG_VERSION_LABEL="Version"
+      MSG_STOP_OLD_FAILED="Old service could not be stopped safely; module replacement cancelled"
+      MSG_HOT_UPDATE_BG="Applying new version in background, no reboot required"
+      MSG_HOT_UPDATE_WAIT_1="Please do not reboot for the next ~3 seconds; if you reboot now,"
+      MSG_HOT_UPDATE_WAIT_2="KernelSU will continue the update on boot using the standard flow"
+      MSG_FAIL_CHECK_ERR="Please check the error messages above"
+      MSG_FAIL_REPORT_ISSUE="and report the issue on GitHub Issues"
+      ;;
+  esac
+}
+
+init_ui_messages
+
+#######################################
+# 将内置中文提示映射为当前语言文本。
+# 参数: $1 原始中文消息
+# 返回: 标准输出打印翻译后的文本
+#######################################
+translate_msg() {
+  local msg="$1"
+  case "${UI_LANG:-en}" in
+    zh)
+      printf '%s\n' "$msg"
+      ;;
+    ru)
+      case "$msg" in
+        "未发现现有用户数据，将执行全新安装") printf '%s\n' "Существующие данные пользователя не найдены, выполняется чистая установка" ;;
+        "选择安装方式") printf '%s\n' "Выбор режима установки" ;;
+        "已选择全新安装") printf '%s\n' "Выбрана чистая установка" ;;
+        "现有数据缺少 config/singbox/config.json，无法保留配置") printf '%s\n' "В существующих данных отсутствует config/singbox/config.json, сохранение конфигурации невозможно" ;;
+        "请先导出节点、记录订阅与个人设置，再选择全新安装") printf '%s\n' "Сначала экспортируйте узлы, сохраните подписки и личные настройки, затем выберите чистую установку" ;;
+        "已选择保留现有数据") printf '%s\n' "Выбрано сохранение существующих данных" ;;
+        "Catalog 数据备份失败") printf '%s\n' "Не удалось создать резервную копию данных Catalog" ;;
+        "Catalog 数据恢复失败") printf '%s\n' "Не удалось восстановить данные Catalog" ;;
+        "全新安装不保留现有数据") printf '%s\n' "Чистая установка: существующие данные не сохраняются" ;;
+        "备份现有用户数据...") printf '%s\n' "Резервное копирование существующих данных пользователя..." ;;
+        "eBPF 入站配置已更新，将使用新版本默认 ebpf.conf") printf '%s\n' "Входящая конфигурация eBPF обновлена, будет использован стандартный ebpf.conf новой версии" ;;
+        "已备份: "*) printf 'Сохранено в резервную копию: %s\n' "${msg#已备份: }" ;;
+        "备份失败: "*) printf 'Ошибка резервного копирования: %s\n' "${msg#备份失败: }" ;;
+        "解压模块文件...") printf '%s\n' "Распаковка файлов модуля..." ;;
+        "解压失败") printf '%s\n' "Ошибка распаковки" ;;
+        "模块文件已解压") printf '%s\n' "Файлы модуля распакованы" ;;
+        "恢复配置文件...") printf '%s\n' "Восстановление файлов конфигурации..." ;;
+        "已恢复: "*) printf 'Восстановлено: %s\n' "${msg#已恢复: }" ;;
+        "恢复失败: "*) printf 'Ошибка восстановления: %s\n' "${msg#恢复失败: }" ;;
+        "检测到代理服务正在运行，停止服务...") printf '%s\n' "Обнаружен работающий прокси-сервис, остановка сервиса..." ;;
+        "服务已停止") printf '%s\n' "Сервис остановлен" ;;
+        "服务停止失败，取消本次安装") printf '%s\n' "Не удалось остановить сервис, установка отменена" ;;
+        "无法启动后台热更新，将在下次开机时由管理器完成更新") printf '%s\n' "Не удалось запустить фоновое горячее обновление, оно завершится при следующей загрузке" ;;
+        "设置文件权限...") printf '%s\n' "Настройка прав доступа к файлам..." ;;
+        "权限设置完成") printf '%s\n' "Права доступа настроены" ;;
+        "安装 NetProxy 管理器") printf '%s\n' "Установка менеджера NetProxy" ;;
+        "已跳过管理器安装") printf '%s\n' "Установка менеджера пропущена" ;;
+        "正在安装随附管理器...") printf '%s\n' "Установка встроенного менеджера..." ;;
+        "管理器安装成功") printf '%s\n' "Менеджер успешно установлен" ;;
+        "管理器安装失败，可稍后手动安装或使用 Google Play") printf '%s\n' "Не удалось установить менеджер, установите его позже вручную или через Google Play" ;;
+        "NetProxy - sing-box 透明代理") printf '%s\n' "NetProxy - прозрачный прокси sing-box" ;;
+        "安装失败") printf '%s\n' "Ошибка установки" ;;
+        "安装完成") printf '%s\n' "Установка завершена" ;;
+        "安装完成，将在下次开机时应用更新") printf '%s\n' "Установка завершена, обновление вступит в силу при следующей загрузке" ;;
+        "安装完成，请重启设备") printf '%s\n' "Установка завершена, перезагрузите устройство" ;;
+        *) printf '%s\n' "$msg" ;;
+      esac
+      ;;
+    *)
+      case "$msg" in
+        "未发现现有用户数据，将执行全新安装") printf '%s\n' "No existing user data found, performing clean install" ;;
+        "选择安装方式") printf '%s\n' "Select installation mode" ;;
+        "已选择全新安装") printf '%s\n' "Selected: clean install" ;;
+        "现有数据缺少 config/singbox/config.json，无法保留配置") printf '%s\n' "Existing data is missing config/singbox/config.json, cannot preserve configuration" ;;
+        "请先导出节点、记录订阅与个人设置，再选择全新安装") printf '%s\n' "Please export nodes and save subscriptions and personal settings first, then select clean install" ;;
+        "已选择保留现有数据") printf '%s\n' "Selected: keep existing data" ;;
+        "Catalog 数据备份失败") printf '%s\n' "Failed to back up Catalog data" ;;
+        "Catalog 数据恢复失败") printf '%s\n' "Failed to restore Catalog data" ;;
+        "全新安装不保留现有数据") printf '%s\n' "Clean install: existing data will not be preserved" ;;
+        "备份现有用户数据...") printf '%s\n' "Backing up existing user data..." ;;
+        "eBPF 入站配置已更新，将使用新版本默认 ebpf.conf") printf '%s\n' "eBPF inbound config updated; new default ebpf.conf will be used" ;;
+        "已备份: "*) printf 'Backed up: %s\n' "${msg#已备份: }" ;;
+        "备份失败: "*) printf 'Backup failed: %s\n' "${msg#备份失败: }" ;;
+        "解压模块文件...") printf '%s\n' "Extracting module files..." ;;
+        "解压失败") printf '%s\n' "Extraction failed" ;;
+        "模块文件已解压") printf '%s\n' "Module files extracted" ;;
+        "恢复配置文件...") printf '%s\n' "Restoring configuration files..." ;;
+        "已恢复: "*) printf 'Restored: %s\n' "${msg#已恢复: }" ;;
+        "恢复失败: "*) printf 'Restore failed: %s\n' "${msg#恢复失败: }" ;;
+        "检测到代理服务正在运行，停止服务...") printf '%s\n' "Running proxy service detected, stopping service..." ;;
+        "服务已停止") printf '%s\n' "Service stopped" ;;
+        "服务停止失败，取消本次安装") printf '%s\n' "Failed to stop service, installation aborted" ;;
+        "无法启动后台热更新，将在下次开机时由管理器完成更新") printf '%s\n' "Cannot start background hot update; update will complete on next boot" ;;
+        "设置文件权限...") printf '%s\n' "Setting file permissions..." ;;
+        "权限设置完成") printf '%s\n' "Permissions set" ;;
+        "安装 NetProxy 管理器") printf '%s\n' "Install NetProxy Manager" ;;
+        "已跳过管理器安装") printf '%s\n' "Skipped manager installation" ;;
+        "正在安装随附管理器...") printf '%s\n' "Installing bundled manager..." ;;
+        "管理器安装成功") printf '%s\n' "Manager installed successfully" ;;
+        "管理器安装失败，可稍后手动安装或使用 Google Play") printf '%s\n' "Manager installation failed; install manually later or use Google Play" ;;
+        "NetProxy - sing-box 透明代理") printf '%s\n' "NetProxy - sing-box Transparent Proxy" ;;
+        "安装失败") printf '%s\n' "Installation Failed" ;;
+        "安装完成") printf '%s\n' "Installation Complete" ;;
+        "安装完成，将在下次开机时应用更新") printf '%s\n' "Installation complete, update will be applied on next boot" ;;
+        "安装完成，请重启设备") printf '%s\n' "Installation complete, please reboot your device" ;;
+        *) printf '%s\n' "$msg" ;;
+      esac
+      ;;
+  esac
+}
+
 # 打印带分隔线的标题。参数: $1 标题文本
 print_title() {
   ui_print ""
   ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━"
-  ui_print "  $1"
+  ui_print "  $(translate_msg "$1")"
   ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
 # 打印步骤提示。参数: $1 文本
 print_step() {
-  ui_print "▶ $1"
+  ui_print "▶ $(translate_msg "$1")"
 }
 
 # 打印成功提示。参数: $1 文本
 print_ok() {
-  ui_print "  ✓ $1"
+  ui_print "  ✓ $(translate_msg "$1")"
 }
 
 # 打印警告提示。参数: $1 文本
 print_warn() {
-  ui_print "  ⚠ $1"
+  ui_print "  ⚠ $(translate_msg "$1")"
 }
 
 # 打印错误提示。参数: $1 文本
 print_error() {
-  ui_print "  ✗ $1"
+  ui_print "  ✗ $(translate_msg "$1")"
 }
 
 # 判断目录是否存在且非空。参数: $1 目录；返回: 0=非空
@@ -149,8 +342,8 @@ choose_install_mode() {
 
   print_title "选择安装方式"
   ui_print ""
-  ui_print "  [音量+] 保留现有数据 (默认)"
-  ui_print "  [音量-] 全新安装"
+  ui_print "  ${MSG_OPT_KEEP_DATA:-[音量+] 保留现有数据 (默认)}"
+  ui_print "  ${MSG_OPT_CLEAN_INSTALL:-[音量-] 全新安装}"
   ui_print ""
 
   if [ "$(wait_volume_key 10)" = "down" ]; then
@@ -673,8 +866,8 @@ get_installed_manager_version() {
   version_name="$(printf '%s\n' "$package_dump" | sed -n 's/^[[:space:]]*versionName=\([^[:space:]]*\).*/\1/p' | head -n 1)"
   version_code="$(printf '%s\n' "$package_dump" | sed -n 's/^[[:space:]]*versionCode=\([0-9][0-9]*\).*/\1/p' | head -n 1)"
 
-  [ -n "$version_name" ] || version_name="未知"
-  [ -n "$version_code" ] || version_code="未知"
+  [ -n "$version_name" ] || version_name="${MSG_UNKNOWN:-未知}"
+  [ -n "$version_code" ] || version_code="${MSG_UNKNOWN:-未知}"
   printf '%s (versionCode %s)\n' "$version_name" "$version_code"
 }
 
@@ -691,24 +884,24 @@ install_bundled_manager() {
   ui_print ""
 
   if [ ! -f "$MODPATH/NetProxy.apk" ]; then
-    ui_print "  本安装包未随附 NetProxy 管理器"
-    ui_print "  可稍后从 Google Play 安装管理器"
+    ui_print "  ${MSG_MGR_NOT_BUNDLED:-本安装包未随附 NetProxy 管理器}"
+    ui_print "  ${MSG_MGR_INSTALL_PLAY:-可稍后从 Google Play 安装管理器}"
     return 0
   fi
 
   if installed_version="$(get_installed_manager_version)"; then
-    ui_print "  已安装 NetProxy 管理器"
-    ui_print "  当前版本: $installed_version"
-    ui_print "  为避免覆盖现有安装，跳过随附 APK"
-    ui_print "  随附 CI 版使用独立签名；如需安装新版，请先卸载旧版并重新刷入"
-    ui_print "  卸载会清除管理器本地数据，日常使用建议通过 Google Play 更新"
+    ui_print "  ${MSG_MGR_ALREADY_INSTALLED:-已安装 NetProxy 管理器}"
+    ui_print "  ${MSG_MGR_CURRENT_VERSION:-当前版本}: $installed_version"
+    ui_print "  ${MSG_MGR_SKIP_BUNDLED:-为避免覆盖现有安装，跳过随附 APK}"
+    ui_print "  ${MSG_MGR_CI_SIGNATURE:-随附 CI 版使用独立签名；如需安装新版，请先卸载旧版并重新刷入}"
+    ui_print "  ${MSG_MGR_UNINSTALL_NOTE:-卸载会清除管理器本地数据，日常使用建议通过 Google Play 更新}"
     rm -f "$MODPATH/NetProxy.apk"
     return 0
   fi
 
-  ui_print "  本包随附 NetProxy 管理器 APK"
-  ui_print "  [音量+] 安装 (默认)"
-  ui_print "  [音量-] 跳过"
+  ui_print "  ${MSG_MGR_APK_BUNDLED:-本包随附 NetProxy 管理器 APK}"
+  ui_print "  ${MSG_OPT_INSTALL_MGR:-[音量+] 安装 (默认)}"
+  ui_print "  ${MSG_OPT_SKIP_MGR:-[音量-] 跳过}"
   ui_print ""
 
   if [ "$(wait_volume_key 10)" = "down" ]; then
@@ -744,14 +937,14 @@ unzip -o "$ZIPFILE" "module.prop" -d "$TMPDIR" > /dev/null 2>&1
 
 print_title "NetProxy - sing-box 透明代理"
 ui_print ""
-ui_print "  版本: $(grep_prop version "$TMPDIR/module.prop" 2> /dev/null || echo "未知")"
+ui_print "  ${MSG_VERSION_LABEL:-版本}: $(grep_prop version "$TMPDIR/module.prop" 2> /dev/null || echo "${MSG_UNKNOWN:-未知}")"
 
 # 先停止旧服务，再替换模块文件，避免运行中的进程继续使用旧文件。
 choose_install_mode || exit 1
 if [ "${BOOTMODE:-false}" = true ] && ! stop_proxy_if_running; then
   print_title "安装失败"
   ui_print ""
-  ui_print "  旧服务未能安全停止，已取消模块替换"
+  ui_print "  ${MSG_STOP_OLD_FAILED:-旧服务未能安全停止，已取消模块替换}"
   ui_print ""
   exit 1
 fi
@@ -769,9 +962,9 @@ if backup_config \
   if [ "${BOOTMODE:-false}" = true ]; then
     if schedule_hot_update; then
       print_title "安装完成"
-      ui_print "  正在后台应用新版本，无需重启设备"
-      ui_print "  接下来约 3 秒请不要重启；若现在重启，"
-      ui_print "  KernelSU 将在开机时按标准流程继续更新"
+      ui_print "  ${MSG_HOT_UPDATE_BG:-正在后台应用新版本，无需重启设备}"
+      ui_print "  ${MSG_HOT_UPDATE_WAIT_1:-接下来约 3 秒请不要重启；若现在重启，}"
+      ui_print "  ${MSG_HOT_UPDATE_WAIT_2:-KernelSU 将在开机时按标准流程继续更新}"
     else
       print_title "安装完成，将在下次开机时应用更新"
     fi
@@ -783,8 +976,8 @@ else
   cleanup
   print_title "安装失败"
   ui_print ""
-  ui_print "  请检查上述错误信息"
-  ui_print "  并在 GitHub Issues 反馈"
+  ui_print "  ${MSG_FAIL_CHECK_ERR:-请检查上述错误信息}"
+  ui_print "  ${MSG_FAIL_REPORT_ISSUE:-并在 GitHub Issues 反馈}"
   ui_print ""
   exit 1
 fi

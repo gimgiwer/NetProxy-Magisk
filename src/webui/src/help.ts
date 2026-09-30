@@ -1,47 +1,53 @@
-import { COMMAND_NAMES, COMMANDS, HELP_TOPICS, type CommandName } from './commands'
+import { COMMAND_NAMES, COMMANDS, HELP_TOPICS, type CommandName } from './commands.ts'
+import { t } from './i18n.ts'
 
-const BANNER = `NetProxy Terminal
+export function getShellHelp(): string {
+  return `${t('help.shell_title')}
+
+${t('help.cmd_shell')}
+
+${t('help.shell_desc')}
 `
+}
 
-const MAIN = `
-命令:
-${COMMAND_NAMES.map(name => `  ${COMMANDS[name].overview}`).join('\n')}
+export function getMainHelp(): string {
+  const commandsBlock = COMMAND_NAMES.map(name => `  ${COMMANDS[name].overview}`).join('\n')
+  return `
+${t('help.commands_label')}
+${commandsBlock}
 
-全局选项:
-  --json                 输出 schema=1 JSON
-  --timeout <秒|时长>    覆盖默认命令超时
+${t('help.global_options_label')}
+${t('help.opt_json')}
+${t('help.opt_timeout')}
 
-本地命令:
-  help [主题]       查看帮助
-  clear             清空终端
-  exit              显示退出当前终端的提示
-  ! <命令>          执行 Root Shell 命令
+${t('help.local_commands_label')}
+${t('help.cmd_help')}
+${t('help.cmd_clear')}
+${t('help.cmd_exit')}
+${t('help.cmd_shell')}
 
-示例:
+${t('help.examples_label')}
   service start
   node use auto default
   mode rule
   sub update-all
   node delay auto default
 
-输入 help all 查看完整命令说明。
+${t('help.help_all_hint')}
 `
-
-const SHELL_HELP = `shell - WebUI 本地扩展
-
-  ! <命令>                      执行 Root Shell 命令
-
-此功能不属于 netproxyctl 公共命令，只在 KernelSU WebUI 中可用。
-`
+}
 
 function topicHelp(topic: string): string | undefined {
-  if (topic === 'shell') return SHELL_HELP
+  if (topic === 'shell') return getShellHelp()
   return COMMANDS[topic as CommandName]?.help
 }
 
 export function getHelp(topic?: string): string {
-  if (!topic) return BANNER + MAIN
+  const banner = t('help.banner')
+  if (!topic) return banner + getMainHelp()
   const normalized = topic.toLowerCase()
-  if (normalized === 'all') return BANNER + MAIN + '\n' + [...COMMAND_NAMES.map(name => COMMANDS[name].help), SHELL_HELP].join('\n')
-  return topicHelp(normalized) || `未知主题: ${topic}\n可用主题: ${HELP_TOPICS.join(', ')}\n输入 help 查看用法。`
+  if (normalized === 'all') {
+    return banner + getMainHelp() + '\n' + [...COMMAND_NAMES.map(name => COMMANDS[name].help), getShellHelp()].join('\n')
+  }
+  return topicHelp(normalized) || t('common.unknown_topic', { topic, topics: HELP_TOPICS.join(', ') })
 }

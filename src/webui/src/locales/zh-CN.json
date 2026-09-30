@@ -1,0 +1,98 @@
+{
+  "common": {
+    "service": "服务",
+    "environment": "环境",
+    "env_ksu": "KernelSU",
+    "env_preview": "预览",
+    "not_ksu_env": "[非 KernelSU 环境]\n请在 KernelSU WebUI 中打开此页面执行命令。",
+    "webview_exit_hint": "WebView 中无法退出，请关闭页面",
+    "exit_code": "退出码: {code}",
+    "exception": "异常: {message}",
+    "unknown_topic": "未知主题: {topic}\n可用主题: {topics}\n输入 help 查看用法。",
+    "lang_select": "语言",
+    "missing_element": "缺少页面元素: {id}"
+  },
+  "states": {
+    "ready": "运行中",
+    "stopped": "未运行",
+    "failed": "启动失败",
+    "starting": "启动中",
+    "stopping": "停止中",
+    "preparing": "准备中",
+    "detecting": "检测中"
+  },
+  "transport": {
+    "failed": "模块命令失败",
+    "failed_with_code": "模块命令失败（退出码 {code}）",
+    "invalid_json": "模块返回的数据格式无效",
+    "empty": "模块没有返回有效结果"
+  },
+  "portal": {
+    "title": "NetProxy",
+    "subtitle": "控制中心",
+    "admin_panel": "管理界面",
+    "webui_title": "NetProxy WebUI",
+    "webui_desc": "服务、节点与应用",
+    "dashboard_title": "sing-box Dashboard",
+    "dashboard_desc": "内核、日志与网络测试",
+    "footer": "请先启动 sing-box 服务"
+  },
+  "help": {
+    "banner": "NetProxy Terminal\n",
+    "commands_label": "命令:",
+    "global_options_label": "全局选项:",
+    "local_commands_label": "本地命令:",
+    "examples_label": "示例:",
+    "help_all_hint": "输入 help all 查看完整命令说明。",
+    "opt_json": "  --json                 输出 schema=1 JSON",
+    "opt_timeout": "  --timeout <秒|时长>    覆盖默认命令超时",
+    "cmd_help": "  help [主题]       查看帮助",
+    "cmd_clear": "  clear             清空终端",
+    "cmd_exit": "  exit              显示退出当前终端的提示",
+    "cmd_shell": "  ! <命令>          执行 Root Shell 命令",
+    "shell_title": "shell - WebUI 本地扩展",
+    "shell_desc": "此功能不属于 netproxyctl 公共命令，只在 KernelSU WebUI 中可用。"
+  },
+  "commands": {
+    "service": {
+      "overview": "service <命令>  服务控制",
+      "help": "service - 服务控制\n\n  service status      查看服务状态、运行时间和流量\n  service start       启动 sing-box 服务\n  service stop        停止 sing-box 服务\n  service restart     重启 sing-box 核心\n  service reload      重载配置\n  service check       检查服务配置\n  service toggle      切换服务状态\n\n状态: stopped / preparing / starting / ready / stopping / failed\n"
+    },
+    "catalog": {
+      "overview": "catalog <命令>  分组查看",
+      "help": "catalog - 节点分组\n\n  catalog list             列出所有节点分组\n  catalog show <分组>      查看分组详情\n"
+    },
+    "node": {
+      "overview": "node <命令>     节点管理",
+      "help": "node - 节点管理\n\n  node list [分组]                 列出节点\n  node snapshot [分组]             查看运行时节点快照\n  node current                     查看当前选择\n  node show <分组>                 查看分组节点\n  node get <分组>/<tag>            获取节点配置摘要\n  node export <分组>/<tag>         导出节点链接\n  node delay [目标] [分组]         测量节点延迟\n  node delay auto <分组>           测量分组内所有节点\n  node add <链接> [分组]           添加单节点链接\n  node import <文件>               导入节点文件\n  node edit <分组>/<tag> <来源>    编辑节点\n  node remove <分组>/<tag>         删除节点\n  node use auto [分组]             自动选择最快节点\n  node use <分组>/<tag>            手动选择节点\n"
+    },
+    "sub": {
+      "overview": "sub <命令>      订阅管理",
+      "help": "sub - 订阅管理\n\n  sub list                         列出订阅\n  sub show <名称>                  查看订阅详情\n  sub add [名称] <URL>             添加订阅\n  sub edit <名称>                  编辑订阅\n  sub update <名称>                更新单个订阅\n  sub update-all                   更新所有订阅\n  sub activate <名称>              激活订阅分组\n  sub remove <名称>                删除订阅\n  sub history <名称>               查看更新历史\n  sub cancel <名称>                取消更新任务\n"
+    },
+    "mode": {
+      "overview": "mode <模式>     出站模式",
+      "help": "mode - 出站模式\n\n  mode rule       规则分流\n  mode global     全局代理\n  mode direct     全局直连\n  mode AllowAds   允许广告规则\n"
+    },
+    "network": {
+      "overview": "network <命令>  网络策略评估",
+      "help": "network - 网络策略\n\n  network evaluate --type <类型> [--ssid <名称>]\n                         评估当前网络并应用 Wi-Fi 策略\n  类型: wifi / not_wifi\n"
+    },
+    "app": {
+      "overview": "app <命令>      分应用代理",
+      "help": "app - 分应用代理\n\n  app list                    查看应用代理配置\n  app mode blacklist          使用黑名单模式\n  app mode whitelist          使用白名单模式\n  app add <用户ID>:<包名>      添加指定用户的应用\n  app remove <用户ID>:<包名>   移除指定用户的应用\n  app enable                  启用分应用代理\n  app disable                 禁用分应用代理\n"
+    },
+    "ebpf": {
+      "overview": "ebpf <命令>     eBPF 能力诊断",
+      "help": "ebpf - eBPF 能力诊断\n\n  ebpf status                         查看已配置能力\n  ebpf status configured              查看当前配置\n  ebpf status all                     检查全部支持能力\n  ebpf status local                   检查本机数据路径\n  ebpf status shared                  检查共享网络数据路径\n  ebpf status all --raw               输出原始诊断信息\n"
+    },
+    "config": {
+      "overview": "config <命令>   配置管理",
+      "help": "config - 配置管理\n\n  config list                         列出配置文件\n  config read <目标>                  读取配置\n  config check                        检查全部配置\n  config validate <目标> <内容文件>   校验配置\n  config apply <目标> <内容文件>      应用配置\n\n  完整配置：singbox/config.json\n  分区目标：singbox/dns、singbox/inbounds、singbox/route 等\n  分区内容保留顶层字段，例如 {\"dns\":{...}}；{} 删除该分区。\n  apply/validate 在目标前加 --revision <读取值>，避免覆盖并发修改。\n"
+    },
+    "logs": {
+      "overview": "logs <命令>     日志管理",
+      "help": "logs - 日志管理\n\n  logs show service             查看服务日志\n  logs show core                查看 sing-box 日志\n  logs clear <类型>             清空日志\n  logs export                   导出运行时配置和脱敏日志\n"
+    }
+  }
+}
