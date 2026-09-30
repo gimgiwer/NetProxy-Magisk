@@ -10,6 +10,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"path"
 	"strconv"
@@ -121,8 +122,14 @@ func Subscription(ctx context.Context, request Request) (Response, error) {
 		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
+	// 初始化独立内存 CookieJar，支持订阅服务重定向鉴权与 Cookie 会话保持 (RFC 6265)。
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return Response{}, fmt.Errorf("create cookie jar: %w", err)
+	}
 	client := &http.Client{
 		Transport: transport,
+		Jar:       jar,
 		Timeout:   request.Timeout,
 		CheckRedirect: func(redirectRequest *http.Request, via []*http.Request) error {
 			return checkSubscriptionRedirect(redirectRequest, via)

@@ -286,6 +286,40 @@ func TestSubscriptionMultiLevelRedirectPreservesHeaders(t *testing.T) {
 	}
 }
 
+func TestSubscriptionRedirectPreservesCookies(t *testing.T) {
+	var seenCookie string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/start":
+			http.SetCookie(writer, &http.Cookie{
+				Name:  "session_token",
+				Value: "cookie-secret-123",
+				Path:  "/",
+			})
+			http.Redirect(writer, request, "/final", http.StatusTemporaryRedirect)
+		case "/final":
+			seenCookie = request.Header.Get("Cookie")
+			_, _ = writer.Write([]byte("socks://example.com:1080#node"))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+
+	response, err := fetch.Subscription(context.Background(), fetch.Request{
+		URL: server.URL + "/start",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Body) == 0 {
+		t.Fatal("重定向未返回有效响应内容")
+	}
+	if !strings.Contains(seenCookie, "session_token=cookie-secret-123") {
+		t.Fatalf("重定向未能正确透传 Set-Cookie: 实际收到 %q", seenCookie)
+	}
+}
+
 func TestSubscriptionCrossHostRedirectStripsAuthenticationHeaders(t *testing.T) {
 	var seenHWID, seenAuthorization, seenToken, seenCookie string
 	target := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
