@@ -28,7 +28,8 @@ internal class ThemePreferenceStore(
             enableBlur = prefs.getBoolean("enable_blur", true),
             enablePredictiveBack = prefs.getBoolean("enable_predictive_back", false),
             enableSmoothCorner = prefs.getBoolean("enable_smooth_corner", true),
-            pageScale = prefs.getFloat("page_scale", 1.0f)
+            pageScale = prefs.getFloat("page_scale", 1.0f),
+            monetPureBlack = prefs.getBoolean("monet_pure_black", false)
         )
     }
 
@@ -52,6 +53,7 @@ internal class ThemePreferenceStore(
         return newThemeMode
     }
 
+    fun setMonetPureBlack(enabled: Boolean) = prefs.edit { putBoolean("monet_pure_black", enabled) }
     fun setKeyColor(color: Int) = prefs.edit { putInt("key_color", color) }
     fun setColorStyle(style: String) = prefs.edit { putString("color_style", style) }
     fun setColorSpec(spec: String) = prefs.edit { putString("color_spec", spec) }
@@ -75,5 +77,6 @@ internal data class ThemePreferencesSnapshot(
     val enablePredictiveBack: Boolean,
     val enableSmoothCorner: Boolean,
     val pageScale: Float,
+    val monetPureBlack: Boolean = false,
 )
 

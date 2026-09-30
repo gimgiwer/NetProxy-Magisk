@@ -53,6 +53,7 @@ enum class ColorMode(val value: Int) {
 data class AppThemeSettings(
     val colorMode: ColorMode,
     val miuixMonet: Boolean,
+    val monetPureBlack: Boolean = false,
     val keyColor: Int,
     val paletteStyle: ThemePaletteStyle,
     val colorSpec: ThemeColorSpec,
@@ -94,6 +95,7 @@ object AppThemeController {
         return AppThemeSettings(
             colorMode = ColorMode.fromValue(colorModeValue),
             miuixMonet = miuixMonet,
+            monetPureBlack = prefs.getBoolean("monet_pure_black", false),
             keyColor = prefs.getInt("key_color", 0),
             paletteStyle = paletteStyle,
             colorSpec = colorSpec,
@@ -131,8 +133,25 @@ fun NetProxyTheme(
         colorSpec = currentSettings.colorSpec,
     )
 
+    val baseColors = controller.currentColors()
+    val effectiveColors = androidx.compose.runtime.remember(
+        baseColors,
+        currentSettings.monetPureBlack,
+        currentSettings.miuixMonet,
+        darkTheme
+    ) {
+        if (currentSettings.miuixMonet && currentSettings.monetPureBlack && darkTheme) {
+            baseColors.copy(
+                background = Color.Black,
+                surface = Color.Black,
+            )
+        } else {
+            baseColors
+        }
+    }
+
     MiuixTheme(
-        colors = controller.currentColors(),
+        colors = effectiveColors,
     ) {
         CompositionLocalProvider(
             LocalColorMode provides currentSettings.colorMode.value,

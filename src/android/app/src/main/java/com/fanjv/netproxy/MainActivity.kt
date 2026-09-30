@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
             val appThemeSettings = AppThemeSettings(
                 colorMode = ColorMode.fromValue(themeState.colorMode),
                 miuixMonet = themeState.miuixMonet,
+                monetPureBlack = themeState.monetPureBlack,
                 keyColor = themeState.keyColor,
                 paletteStyle = paletteStyle,
                 colorSpec = colorSpec,

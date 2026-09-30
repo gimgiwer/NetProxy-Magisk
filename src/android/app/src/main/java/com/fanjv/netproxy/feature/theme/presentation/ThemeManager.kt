@@ -31,6 +31,7 @@ class ThemeManager(prefs: SharedPreferences) {
                 enablePredictiveBack = p.enablePredictiveBack,
                 enableSmoothCorner = p.enableSmoothCorner,
                 pageScale = p.pageScale,
+                monetPureBlack = p.monetPureBlack,
             )
         )
         state = _state.asStateFlow()
@@ -79,6 +80,11 @@ class ThemeManager(prefs: SharedPreferences) {
     fun setPageScale(scale: Float) {
         store.setPageScale(scale)
         _state.update { it.copy(pageScale = scale) }
+    }
+
+    fun setMonetPureBlack(enabled: Boolean) {
+        store.setMonetPureBlack(enabled)
+        _state.update { it.copy(monetPureBlack = enabled) }
     }
 }
 

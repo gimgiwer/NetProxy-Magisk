@@ -239,6 +239,8 @@
     <string name="settings_theme_mode_system">跟随系统</string>
     <string name="settings_theme_mode_light">浅色</string>
     <string name="settings_theme_mode_dark">深色</string>
+    <string name="settings_monet_pure_black">强制纯黑背景</string>
+    <string name="settings_monet_pure_black_summary">在 Monet 深色主题下强制使用纯黑 (AMOLED) 背景与卡片底色</string>
     <string name="settings_key_color">强调色</string>
     <string name="settings_key_color_default">默认</string>
     <string name="color_blue">蓝色</string>

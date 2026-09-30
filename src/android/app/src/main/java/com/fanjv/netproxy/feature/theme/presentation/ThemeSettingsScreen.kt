@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuOpen
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.RoundedCorner
 import androidx.compose.material.icons.rounded.Style
@@ -177,6 +178,22 @@ internal fun ThemeSettingsScreen(
                             )
                         })
                         if (theme.miuixMonet) {
+                            add(CardItem("pureBlack") {
+                                SwitchPreference(
+                                    title = stringResource(R.string.settings_monet_pure_black),
+                                    summary = stringResource(R.string.settings_monet_pure_black_summary),
+                                    startAction = {
+                                        Icon(
+                                            Icons.Rounded.DarkMode,
+                                            modifier = Modifier.padding(end = 6.dp),
+                                            contentDescription = null,
+                                            tint = colorScheme.onBackground
+                                        )
+                                    },
+                                    checked = theme.monetPureBlack,
+                                    onCheckedChange = viewModel::setMonetPureBlack
+                                )
+                            })
                             add(CardItem("keyColor") {
                                 val colorItems = listOf(
                                     stringResource(R.string.settings_key_color_default),
