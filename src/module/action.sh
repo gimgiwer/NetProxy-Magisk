@@ -36,6 +36,7 @@ case "$(detect_locale)" in
     MSG_HEADER=' Управление сервисом NetProxy'
     MSG_TOGGLE_OK=' Результат: состояние сервиса NetProxy переключено'
     MSG_TOGGLE_FAIL=' Результат: не удалось переключить состояние сервиса NetProxy'
+    MSG_PROP_DESC='Прозрачный прокси на базе sing-box'
     ;;
   zh)
     MSG_MISSING_CTL='缺少 netproxyctl，无法执行服务操作。'
@@ -43,6 +44,7 @@ case "$(detect_locale)" in
     MSG_HEADER=' NetProxy 服务操作'
     MSG_TOGGLE_OK=' 操作结果: NetProxy 服务状态已切换'
     MSG_TOGGLE_FAIL=' 操作结果: NetProxy 服务切换失败'
+    MSG_PROP_DESC='基于 sing-box 内核的透明代理工具'
     ;;
   *)
     MSG_MISSING_CTL='Missing netproxyctl, unable to perform service action.'
@@ -50,8 +52,13 @@ case "$(detect_locale)" in
     MSG_HEADER=' NetProxy Service Action'
     MSG_TOGGLE_OK=' Result: NetProxy service state toggled'
     MSG_TOGGLE_FAIL=' Result: Failed to toggle NetProxy service'
+    MSG_PROP_DESC='Transparent proxy powered by sing-box'
     ;;
 esac
+
+# 同步更新 module.prop 描述，确保语言切换后模块列表展示对应语言
+[ -f "$MODDIR/module.prop" ] && [ -n "${MSG_PROP_DESC:-}" ] \
+  && sed -i "s|^description=.*|description=${MSG_PROP_DESC}|" "$MODDIR/module.prop" 2> /dev/null || true
 
 [ -x "$NETPROXY_CTL" ] || {
   printf '%s\n' "$MSG_MISSING_CTL" >&2

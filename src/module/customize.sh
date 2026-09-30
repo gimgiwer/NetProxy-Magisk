@@ -100,6 +100,7 @@ init_ui_messages() {
       MSG_HOT_UPDATE_WAIT_2="KernelSU продолжит обновление при загрузке в стандартном режиме"
       MSG_FAIL_CHECK_ERR="Пожалуйста, проверьте сообщения об ошибках выше"
       MSG_FAIL_REPORT_ISSUE="и сообщите о проблеме в GitHub Issues"
+      MSG_PROP_DESCRIPTION="Прозрачный прокси на базе sing-box"
       ;;
     zh)
       MSG_OPT_KEEP_DATA="[音量+] 保留现有数据 (默认)"
@@ -122,6 +123,7 @@ init_ui_messages() {
       MSG_HOT_UPDATE_WAIT_2="KernelSU 将在开机时按标准流程继续更新"
       MSG_FAIL_CHECK_ERR="请检查上述错误信息"
       MSG_FAIL_REPORT_ISSUE="并在 GitHub Issues 反馈"
+      MSG_PROP_DESCRIPTION="基于 sing-box 内核的透明代理工具"
       ;;
     *)
       MSG_OPT_KEEP_DATA="[Volume+] Keep existing data (default)"
@@ -144,11 +146,26 @@ init_ui_messages() {
       MSG_HOT_UPDATE_WAIT_2="KernelSU will continue the update on boot using the standard flow"
       MSG_FAIL_CHECK_ERR="Please check the error messages above"
       MSG_FAIL_REPORT_ISSUE="and report the issue on GitHub Issues"
+      MSG_PROP_DESCRIPTION="Transparent proxy powered by sing-box"
       ;;
   esac
 }
 
 init_ui_messages
+
+#######################################
+# 根据当前界面语言动态更新 module.prop 中的 description。
+# 参数: $1 module.prop 文件路径
+# 全局: 读取 MSG_PROP_DESCRIPTION
+# 返回: 始终返回 0。
+#######################################
+localize_module_description() {
+  local prop_file="$1"
+  [ -f "$prop_file" ] || return 0
+  [ -n "${MSG_PROP_DESCRIPTION:-}" ] || return 0
+
+  sed -i "s|^description=.*|description=${MSG_PROP_DESCRIPTION}|" "$prop_file" 2> /dev/null || true
+}
 
 #######################################
 # 将内置中文提示映射为当前语言文本。
@@ -789,6 +806,9 @@ NETPROXY_HOT_UPDATE_WORKER
 #######################################
 set_permissions() {
   print_step "设置文件权限..."
+
+  # 写入与当前系统语言匹配的模块描述
+  localize_module_description "$MODPATH/module.prop"
 
   # 先设置默认权限，再单独放开真正需要执行的入口。
   set_perm_recursive "$MODPATH" 0 0 0755 0644 || return 1
