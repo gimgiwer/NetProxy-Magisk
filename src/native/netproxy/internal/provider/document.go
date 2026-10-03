@@ -256,6 +256,7 @@ func validateTag(tag string, seen map[string]struct{}) error {
 
 func NormalizeTags(document *Document) {
 	used := make(map[string]int, len(document.Outbounds)+len(document.Endpoints))
+	renames := make(map[string]string)
 	unique := func(tag, fallback string) string {
 		tag = strings.TrimSpace(tag)
 		if tag == "" {
@@ -275,10 +276,32 @@ func NormalizeTags(document *Document) {
 		}
 	}
 	for index := range document.Outbounds {
-		document.Outbounds[index].Tag = unique(document.Outbounds[index].Tag, document.Outbounds[index].Type)
+		oldTag := document.Outbounds[index].Tag
+		newTag := unique(oldTag, document.Outbounds[index].Type)
+		document.Outbounds[index].Tag = newTag
+		if oldTag != "" && oldTag != newTag {
+			renames[oldTag] = newTag
+		}
 	}
 	for index := range document.Endpoints {
 		document.Endpoints[index].Tag = unique(document.Endpoints[index].Tag, document.Endpoints[index].Type)
+	}
+	if len(renames) > 0 {
+		for index := range document.Outbounds {
+			if urltestOpts, ok := document.Outbounds[index].Options.(*option.URLTestOutboundOptions); ok {
+				for i, ref := range urltestOpts.Outbounds {
+					if target, exists := renames[ref]; exists {
+						urltestOpts.Outbounds[i] = target
+					}
+				}
+			} else if selectorOpts, ok := document.Outbounds[index].Options.(*option.SelectorOutboundOptions); ok {
+				for i, ref := range selectorOpts.Outbounds {
+					if target, exists := renames[ref]; exists {
+						selectorOpts.Outbounds[i] = target
+					}
+				}
+			}
+		}
 	}
 }
 

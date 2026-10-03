@@ -89,6 +89,13 @@ func Content(ctx context.Context, content string, allowInsecure bool) (provider.
 
 	format := DetectFormat(trimmed)
 	switch format {
+	case FormatXrayJSON:
+		doc, diags, err := ParseXrayJSON(ctx, trimmed)
+		if err != nil {
+			return provider.ParseResult{Diagnostics: diags}, err
+		}
+		return finish(doc, diags, allowInsecure)
+
 	case FormatSingBoxJSON:
 		if outbounds, endpoints, err := providerparser.ParseBoxSubscription(ctx, trimmed); err == nil && len(outbounds)+len(endpoints) > 0 {
 			return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, nil, allowInsecure)
@@ -122,6 +129,9 @@ func Content(ctx context.Context, content string, allowInsecure bool) (provider.
 
 	default:
 		// 当格式无法准确匹配时，进行多重智能回退尝试
+		if doc, diags, err := ParseXrayJSON(ctx, trimmed); err == nil && len(doc.Outbounds)+len(doc.Endpoints) > 0 {
+			return finish(doc, diags, allowInsecure)
+		}
 		if outbounds, endpoints, err := providerparser.ParseBoxSubscription(ctx, trimmed); err == nil && len(outbounds)+len(endpoints) > 0 {
 			return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, nil, allowInsecure)
 		}

@@ -10,6 +10,8 @@ type Format string
 const (
 	// FormatUnknown 表示无法识别的格式。
 	FormatUnknown Format = "unknown"
+	// FormatXrayJSON 表示 Xray / Happ / Incy JSON 订阅或配置格式。
+	FormatXrayJSON Format = "xray"
 	// FormatSingBoxJSON 表示 Sing-box 原生 JSON 或 SIP008 JSON 订阅格式。
 	FormatSingBoxJSON Format = "sing-box"
 	// FormatClashYAML 表示 Clash / Mihomo YAML 订阅或配置文件格式。
@@ -28,7 +30,12 @@ func DetectFormat(content string) Format {
 		return FormatUnknown
 	}
 
-	// 1. 判断是否为 Sing-box JSON 或 SIP008 JSON
+	// 1. 判断是否为 Xray / Happ / Incy JSON 格式（先于通用 Sing-box JSON 判断）
+	if isXrayJSON(trimmed) {
+		return FormatXrayJSON
+	}
+
+	// 2. 判断是否为 Sing-box JSON 或 SIP008 JSON
 	if isJSONFormat(trimmed) {
 		return FormatSingBoxJSON
 	}
@@ -49,6 +56,33 @@ func DetectFormat(content string) Format {
 	}
 
 	return FormatUnknown
+}
+
+// isXrayJSON 检查内容是否符合 Xray / Happ / Incy JSON 订阅或配置格式。
+func isXrayJSON(trimmed string) bool {
+	if !strings.HasPrefix(trimmed, "{") && !strings.HasPrefix(trimmed, "[") {
+		return false
+	}
+	lower := strings.ToLower(trimmed)
+	// Xray / Happ 特有标志字段：remarks、streamSettings、vnext、realitySettings、burstObservatory、balancers
+	if strings.Contains(lower, `"remarks"`) ||
+		strings.Contains(lower, `"streamsettings"`) ||
+		strings.Contains(lower, `"vnext"`) ||
+		strings.Contains(lower, `"realitysettings"`) ||
+		strings.Contains(lower, `"burstobservatory"`) ||
+		strings.Contains(lower, `"balancers"`) {
+		return true
+	}
+	// protocol 字段配合 Xray 典型协议或内置出站
+	if strings.Contains(lower, `"protocol"`) && (strings.Contains(lower, `"vless"`) ||
+		strings.Contains(lower, `"vmess"`) ||
+		strings.Contains(lower, `"hysteria"`) ||
+		strings.Contains(lower, `"trojan"`) ||
+		strings.Contains(lower, `"freedom"`) ||
+		strings.Contains(lower, `"blackhole"`)) {
+		return true
+	}
+	return false
 }
 
 // isJSONFormat 检查内容是否符合 Sing-box 或 SIP008 JSON 格式规范。

@@ -90,6 +90,16 @@ func TestDetectFormat(t *testing.T) {
 			expected: convert.FormatURIList,
 		},
 		{
+			name:     "Xray JSON Array",
+			input:    `[{"remarks":"node1","outbounds":[{"protocol":"vless","settings":{"vnext":[{"address":"1.2.3.4","port":443,"users":[{"id":"uuid"}]}]}}]}]`,
+			expected: convert.FormatXrayJSON,
+		},
+		{
+			name:     "Xray JSON Object with Balancers",
+			input:    `{"remarks":"Самый Быстрый АВТО","routing":{"balancers":[{"tag":"auto","selector":["node-"]}]},"outbounds":[{"tag":"node-1","protocol":"vless","settings":{"vnext":[{"address":"1.2.3.4","port":443,"users":[{"id":"uuid"}]}]}}]}`,
+			expected: convert.FormatXrayJSON,
+		},
+		{
 			name:     "Unknown text",
 			input:    "just some random text without proxy headers",
 			expected: convert.FormatUnknown,
