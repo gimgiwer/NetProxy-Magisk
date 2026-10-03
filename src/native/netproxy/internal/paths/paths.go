@@ -113,3 +113,11 @@ func SingBoxLocalRulesDir(singBoxDir string) string {
 func SingBoxRemoteRulesDir(singBoxDir string) string {
 	return filepath.Join(SingBoxRulesDir(singBoxDir), "remote")
 }
+
+// SingBoxPresetsDir 返回给定 sing-box 配置根目录下的预设规则模板目录。
+func SingBoxPresetsDir(singBoxDir string) string {
+	return filepath.Join(singBoxDir, "presets")
+}
+
+// PresetsDir 返回预设规则模板目录。
+func (l Layout) PresetsDir() string { return SingBoxPresetsDir(l.SingBoxDir()) }

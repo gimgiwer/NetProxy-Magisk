@@ -299,6 +299,97 @@ class SingBoxSchemaValidatorTest {
     }
 
     @Test
+    fun bundledSchemaValidatesAmneziaWGEndpointAndRejectsInvalidFields() = runBlocking {
+        val schemaFile = sequenceOf(
+            File("src/main/assets/sing-box.schema.json"),
+            File("app/src/main/assets/sing-box.schema.json"),
+        ).first(File::isFile)
+        val bundledValidator = SingBoxSchemaValidator(schemaFile.readText())
+
+        // 验证合法的 AmneziaWG (AWG) 端点配置通过校验
+        val validAwgConfig = """
+            {
+              "endpoints": [
+                {
+                  "type": "wireguard",
+                  "tag": "awg-ep",
+                  "private_key": "aW5pdGlhbF9wcml2YXRlX2tleV9leGFtcGxlCg==",
+                  "address": ["10.0.0.2/32"],
+                  "jc": 4,
+                  "jmin": 40,
+                  "jmax": 70,
+                  "s1": 15,
+                  "s2": 30,
+                  "s3": 5,
+                  "s4": 10,
+                  "h1": 12345678,
+                  "h2": "0x12345678",
+                  "h3": 87654321,
+                  "h4": "0x87654321",
+                  "i1": "01020304",
+                  "i2": "05060708",
+                  "i3": "090a0b0c",
+                  "i4": "0d0e0f10",
+                  "i5": "11121314",
+                  "peers": [
+                    {
+                      "address": "198.51.100.1",
+                      "port": 51820,
+                      "public_key": "cGVlcl9wdWJsaWNfa2V5X2V4YW1wbGVfaGVyZQ==",
+                      "allowed_ips": ["0.0.0.0/0"],
+                      "jc": 4,
+                      "jmin": 40,
+                      "jmax": 70,
+                      "h1": 12345678
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+        assertEquals(SingBoxSchemaValidationResult.Valid, bundledValidator.validate(validAwgConfig))
+
+        // 验证 jc 超出 0-255 范围时被拦截拒绝
+        val invalidJcConfig = """
+            {
+              "endpoints": [
+                {
+                  "type": "wireguard",
+                  "tag": "awg-invalid",
+                  "private_key": "aW5pdGlhbF9wcml2YXRlX2tleV9leGFtcGxlCg==",
+                  "jc": 256
+                }
+              ]
+            }
+        """.trimIndent()
+        assertTrue(bundledValidator.validate(invalidJcConfig) is SingBoxSchemaValidationResult.Invalid)
+
+        // 验证 Outbound WireGuard 支持 AWG 混淆字段
+        val validAwgOutbound = """
+            {
+              "outbounds": [
+                {
+                  "type": "wireguard",
+                  "tag": "awg-out",
+                  "server": "198.51.100.1",
+                  "server_port": 51820,
+                  "local_address": ["10.0.0.2/32"],
+                  "private_key": "aW5pdGlhbF9wcml2YXRlX2tleV9leGFtcGxlCg==",
+                  "peer_public_key": "cGVlcl9wdWJsaWNfa2V5X2V4YW1wbGVfaGVyZQ==",
+                  "jc": 3,
+                  "jmin": 20,
+                  "jmax": 50,
+                  "s1": 10,
+                  "s2": 20,
+                  "h1": 1
+                }
+              ]
+            }
+        """.trimIndent()
+        assertEquals(SingBoxSchemaValidationResult.Valid, bundledValidator.validate(validAwgOutbound))
+    }
+
+    @Test
     fun bundledSchemaSupportsRef1ndExtensions() = runBlocking {
         val schemaFile = sequenceOf(
             File("src/main/assets/sing-box.schema.json"),

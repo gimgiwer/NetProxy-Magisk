@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import top.yukonga.scripta.editor.completion.CompletionRequest
 import top.yukonga.scripta.editor.text.TextPosition
+import java.io.File
 
 class SingBoxSchemaCompletionProviderTest {
     private val provider = SingBoxSchemaCompletionProvider(TEST_SCHEMA)
@@ -104,6 +105,75 @@ class SingBoxSchemaCompletionProviderTest {
         assertEquals("$.inbounds[0].type", requireNotNull(help).path)
         assertEquals("type", help.field)
         assertTrue(help.documentation.orEmpty().contains("配置对象的类型"))
+    }
+
+    @Test
+    fun `wireguard endpoint completion offers amneziawg properties from bundled schema`() = runBlocking {
+        val schemaFile = sequenceOf(
+            File("src/main/assets/sing-box.schema.json"),
+            File("app/src/main/assets/sing-box.schema.json"),
+        ).first(File::isFile)
+        val bundledProvider = SingBoxSchemaCompletionProvider(schemaFile.readText())
+
+        val document = """
+            {
+              "endpoints": [
+                {
+                  "type": "wireguard",
+                  ""
+                }
+              ]
+            }
+        """.trimIndent()
+        val caretOffset = document.indexOf("\"\"", document.indexOf("wireguard")) + 1
+
+        val result = bundledProvider.complete(document.requestAt(caretOffset))
+        val labels = requireNotNull(result).items.map { it.label }
+
+        // 验证 AmneziaWG 混淆参数均进入自动补全列表
+        assertTrue("jc" in labels)
+        assertTrue("jmin" in labels)
+        assertTrue("jmax" in labels)
+        assertTrue("s1" in labels)
+        assertTrue("s2" in labels)
+        assertTrue("s3" in labels)
+        assertTrue("s4" in labels)
+        assertTrue("h1" in labels)
+        assertTrue("h2" in labels)
+        assertTrue("h3" in labels)
+        assertTrue("h4" in labels)
+        assertTrue("i1" in labels)
+        assertTrue("i2" in labels)
+        assertTrue("i3" in labels)
+        assertTrue("i4" in labels)
+        assertTrue("i5" in labels)
+    }
+
+    @Test
+    fun `context help exposes amneziawg field descriptions across locales`() {
+        val zh = SingBoxSchemaStrings.ZH
+        val en = SingBoxSchemaStrings.EN
+        val ru = SingBoxSchemaStrings.RU
+
+        // 验证中文描述正确
+        assertTrue(requireNotNull(zh.fieldDocumentation("jc")).contains("AmneziaWG"))
+        assertTrue(requireNotNull(zh.fieldDocumentation("jmin")).contains("垃圾数据包"))
+        assertTrue(requireNotNull(zh.fieldDocumentation("h1")).contains("握手"))
+
+        // 验证英文描述正确
+        assertTrue(requireNotNull(en.fieldDocumentation("jc")).contains("AmneziaWG"))
+        assertTrue(requireNotNull(en.fieldDocumentation("jmin")).contains("junk packet"))
+        assertTrue(requireNotNull(en.fieldDocumentation("h1")).contains("handshake"))
+
+        // 验证俄文描述正确，并严格检查字母 «ё» 与专业用语
+        val ruJc = requireNotNull(ru.fieldDocumentation("jc"))
+        val ruJmin = requireNotNull(ru.fieldDocumentation("jmin"))
+        val ruH1 = requireNotNull(ru.fieldDocumentation("h1"))
+
+        assertTrue(ruJc.contains("мусорных пакетов"))
+        assertTrue(ruJmin.contains("мусорного пакета"))
+        assertTrue(ruH1.contains("рукопожатия"))
+        assertTrue(ru.localizedType("integer").contains("целое число"))
     }
 
     private fun String.requestAt(offset: Int, explicit: Boolean = false): CompletionRequest =

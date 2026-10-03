@@ -13,11 +13,16 @@ import (
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	providerparser "github.com/sagernet/sing-box/provider/parser"
-	"gopkg.in/yaml.v3"
 
 	"github.com/Fanju6/NetProxy-Magisk/src/native/netproxy/internal/provider"
 )
 
+func init() {
+	// 向 provider 包注册全局默认文档解析器，以解除包之间的循环依赖
+	provider.SetDefaultParser(Content)
+}
+
+// DiagnosticsError 携带解析诊断信息列表的错误类型。
 type DiagnosticsError struct {
 	Diagnostics []provider.Diagnostic
 }
@@ -29,13 +34,23 @@ func (e *DiagnosticsError) Error() string {
 	return fmt.Sprintf("no nodes found: %s", e.Diagnostics[0].Message)
 }
 
+// Link 解析单个分享链接并校验有效性。
 func Link(ctx context.Context, link string, allowInsecure bool) (provider.ParseResult, error) {
-	outbound, err := parseLink(strings.TrimSpace(link))
+	outbound, err := ParseLink(strings.TrimSpace(link))
 	if err != nil {
 		diagnostic := provider.Diagnostic{Source: sourceLabel(link), Code: "link.invalid", Message: err.Error()}
 		return provider.ParseResult{Diagnostics: []provider.Diagnostic{diagnostic}}, &DiagnosticsError{Diagnostics: []provider.Diagnostic{diagnostic}}
 	}
 	document := provider.Document{Outbounds: []option.Outbound{outbound}}
+	if outbound.Type == C.TypeWireGuard {
+		if wgOptions, ok := outbound.Options.(*option.WireGuardEndpointOptions); ok {
+			document.Endpoints = append(document.Endpoints, option.Endpoint{
+				Type:    C.TypeWireGuard,
+				Tag:     outbound.Tag,
+				Options: wgOptions,
+			})
+		}
+	}
 	provider.NormalizeTags(&document)
 	if allowInsecure {
 		applyAllowInsecure(&document)
@@ -47,7 +62,7 @@ func Link(ctx context.Context, link string, allowInsecure bool) (provider.ParseR
 	return provider.ParseResult{Document: document}, nil
 }
 
-// Input 按链接或文件内容解析节点输入。
+// Input 按文件路径、单链接或订阅文本自动解析输入。
 func Input(ctx context.Context, input string, allowInsecure bool) (provider.ParseResult, error) {
 	if info, err := os.Stat(input); err == nil && !info.IsDir() {
 		content, err := os.ReadFile(input)
@@ -62,82 +77,69 @@ func Input(ctx context.Context, input string, allowInsecure bool) (provider.Pars
 	return Content(ctx, input, allowInsecure)
 }
 
+// Content 全功能全格式订阅内容解析入口。
 func Content(ctx context.Context, content string, allowInsecure bool) (provider.ParseResult, error) {
-	trimmed := strings.TrimSpace(content)
+	normalized := NormalizeRawPayload(content)
+	trimmed := strings.TrimSpace(normalized)
 	if trimmed == "" {
 		diagnostic := provider.Diagnostic{Code: "input.empty", Message: "input is empty"}
 		return provider.ParseResult{Diagnostics: []provider.Diagnostic{diagnostic}}, &DiagnosticsError{Diagnostics: []provider.Diagnostic{diagnostic}}
 	}
 	ctx = provider.Context(ctx)
 
-	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+	format := DetectFormat(trimmed)
+	switch format {
+	case FormatSingBoxJSON:
 		if outbounds, endpoints, err := providerparser.ParseBoxSubscription(ctx, trimmed); err == nil && len(outbounds)+len(endpoints) > 0 {
 			return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, nil, allowInsecure)
 		}
 		if outbounds, endpoints, err := providerparser.ParseSIP008Subscription(ctx, trimmed); err == nil && len(outbounds)+len(endpoints) > 0 {
 			return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, nil, allowInsecure)
 		}
-	}
+		diagnostic := provider.Diagnostic{Code: "json.invalid", Message: "failed to parse Sing-box / SIP008 JSON subscription"}
+		return provider.ParseResult{Diagnostics: []provider.Diagnostic{diagnostic}}, &DiagnosticsError{Diagnostics: []provider.Diagnostic{diagnostic}}
 
-	if looksLikeClash(trimmed) {
-		return parseClash(ctx, trimmed, allowInsecure)
-	}
+	case FormatClashYAML:
+		doc, diags, err := ParseClashYAML(ctx, trimmed)
+		if err != nil {
+			return provider.ParseResult{Diagnostics: diags}, err
+		}
+		return finish(doc, diags, allowInsecure)
 
-	return parseRaw(ctx, trimmed, allowInsecure)
-}
+	case FormatWireGuard:
+		doc, diags, err := ParseWireGuardConf(trimmed)
+		if err != nil {
+			return provider.ParseResult{Diagnostics: diags}, err
+		}
+		return finish(doc, diags, allowInsecure)
 
-func parseClash(ctx context.Context, content string, allowInsecure bool) (provider.ParseResult, error) {
-	var config providerparser.ClashConfig
-	if err := yaml.Unmarshal([]byte(content), &config); err != nil {
-		diagnostic := provider.Diagnostic{Code: "clash.invalid", Message: err.Error()}
+	case FormatURIList:
+		doc, diags, err := ParseURIList(trimmed)
+		if err != nil {
+			return provider.ParseResult{Diagnostics: diags}, err
+		}
+		return finish(doc, diags, allowInsecure)
+
+	default:
+		// 当格式无法准确匹配时，进行多重智能回退尝试
+		if outbounds, endpoints, err := providerparser.ParseBoxSubscription(ctx, trimmed); err == nil && len(outbounds)+len(endpoints) > 0 {
+			return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, nil, allowInsecure)
+		}
+		if doc, diags, err := ParseClashYAML(ctx, trimmed); err == nil && len(doc.Outbounds)+len(doc.Endpoints) > 0 {
+			return finish(doc, diags, allowInsecure)
+		}
+		if doc, diags, err := ParseWireGuardConf(trimmed); err == nil && len(doc.Outbounds)+len(doc.Endpoints) > 0 {
+			return finish(doc, diags, allowInsecure)
+		}
+		if doc, diags, err := ParseURIList(trimmed); err == nil && len(doc.Outbounds)+len(doc.Endpoints) > 0 {
+			return finish(doc, diags, allowInsecure)
+		}
+		diagnostic := provider.Diagnostic{Code: "input.unknown_format", Message: "unsupported or unrecognizable subscription format"}
 		return provider.ParseResult{Diagnostics: []provider.Diagnostic{diagnostic}}, &DiagnosticsError{Diagnostics: []provider.Diagnostic{diagnostic}}
 	}
-	var diagnostics []provider.Diagnostic
-	for index, proxy := range config.Proxies {
-		if proxy.SingType == "" {
-			diagnostics = append(diagnostics, provider.Diagnostic{
-				Index:   index + 1,
-				Source:  proxy.Name,
-				Code:    "clash.protocol_unsupported",
-				Message: fmt.Sprintf("unsupported Clash protocol %q", proxy.Type),
-			})
-		}
-	}
-	outbounds, endpoints, err := providerparser.ParseClashSubscription(ctx, content)
-	if err != nil {
-		diagnostics = append(diagnostics, provider.Diagnostic{Code: "clash.invalid", Message: err.Error()})
-		return provider.ParseResult{Diagnostics: diagnostics}, &DiagnosticsError{Diagnostics: diagnostics}
-	}
-	return finish(provider.Document{Outbounds: outbounds, Endpoints: endpoints}, diagnostics, allowInsecure)
 }
 
-func parseRaw(ctx context.Context, content string, allowInsecure bool) (provider.ParseResult, error) {
-	if decoded, ok := decodeSubscription(content); ok {
-		content = decoded
-	}
-	content = strings.ReplaceAll(content, "\r\n", "\n")
-	var document provider.Document
-	var diagnostics []provider.Diagnostic
-	for index, line := range strings.Split(content, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "# ") {
-			continue
-		}
-		outbound, err := parseLink(line)
-		if err != nil {
-			diagnostics = append(diagnostics, provider.Diagnostic{
-				Index:   index + 1,
-				Source:  sourceLabel(line),
-				Code:    "link.invalid",
-				Message: err.Error(),
-			})
-			continue
-		}
-		document.Outbounds = append(document.Outbounds, outbound)
-	}
-	return finish(document, diagnostics, allowInsecure)
-}
-
+// finish 执行标签归一化、可选安全覆盖及完整性校验。
 func finish(document provider.Document, diagnostics []provider.Diagnostic, allowInsecure bool) (provider.ParseResult, error) {
 	provider.NormalizeTags(&document)
 	if allowInsecure {
@@ -156,25 +158,9 @@ func finish(document provider.Document, diagnostics []provider.Diagnostic, allow
 	return provider.ParseResult{Document: document, Diagnostics: diagnostics}, nil
 }
 
+// parseLink 保持内部方法签名兼容。
 func parseLink(link string) (option.Outbound, error) {
-	if link == "" {
-		return option.Outbound{}, errors.New("empty link")
-	}
-	schemeEnd := strings.Index(link, "://")
-	if schemeEnd <= 0 {
-		return option.Outbound{}, errors.New("missing URI scheme")
-	}
-	scheme := strings.ToLower(link[:schemeEnd])
-	switch scheme {
-	case "ss":
-		return parseShadowsocks(link)
-	case "socks", "socks5":
-		return parseSOCKS(link)
-	case "http", "https":
-		return parseHTTP(link)
-	default:
-		return providerparser.ParseSubscriptionLink(link)
-	}
+	return ParseLink(link)
 }
 
 func parseShadowsocks(link string) (option.Outbound, error) {
@@ -202,9 +188,10 @@ func parseShadowsocks(link string) (option.Outbound, error) {
 		return option.Outbound{}, err
 	}
 	options := &option.ShadowsocksOutboundOptions{
-		Server: u.Hostname(), ServerPort: port,
-		Method:   method,
-		Password: password,
+		Server:     u.Hostname(),
+		ServerPort: port,
+		Method:     method,
+		Password:   password,
 	}
 	if plugin := u.Query().Get("plugin"); plugin != "" {
 		options.Plugin, options.PluginOptions, _ = strings.Cut(plugin, ";")
@@ -232,8 +219,9 @@ func parseSOCKS(link string) (option.Outbound, error) {
 		return option.Outbound{}, err
 	}
 	options := &option.SOCKSOutboundOptions{
-		Server: u.Hostname(), ServerPort: port,
-		Version: "5",
+		Server:     u.Hostname(),
+		ServerPort: port,
+		Version:    "5",
 	}
 	if u.User != nil {
 		options.Username = u.User.Username()
@@ -281,7 +269,8 @@ func parseHTTP(link string) (option.Outbound, error) {
 		return option.Outbound{}, err
 	}
 	options := &option.HTTPOutboundOptions{
-		Server: u.Hostname(), ServerPort: port,
+		Server:     u.Hostname(),
+		ServerPort: port,
 	}
 	if u.User != nil {
 		options.Username = u.User.Username()
@@ -299,20 +288,6 @@ func parsePort(value string) (uint16, error) {
 		return 0, fmt.Errorf("invalid server port %q", value)
 	}
 	return uint16(port), nil
-}
-
-func decodeSubscription(content string) (string, bool) {
-	compact := strings.Map(func(r rune) rune {
-		if r == '\r' || r == '\n' || r == ' ' || r == '\t' {
-			return -1
-		}
-		return r
-	}, content)
-	decoded, ok := decodeBase64(compact)
-	if !ok || !strings.Contains(decoded, "://") {
-		return content, false
-	}
-	return decoded, true
 }
 
 func decodeBase64(value string) (string, bool) {
@@ -342,10 +317,6 @@ func sourceLabel(input string) string {
 		return strings.ToLower(input[:end]) + "://..."
 	}
 	return "input"
-}
-
-func looksLikeClash(content string) bool {
-	return strings.Contains(content, "\nproxies:") || strings.HasPrefix(content, "proxies:")
 }
 
 func applyAllowInsecure(document *provider.Document) {

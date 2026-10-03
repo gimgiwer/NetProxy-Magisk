@@ -74,7 +74,10 @@ func (c *cli) help() {
   netproxyctl [--json] [--timeout <秒|时长>] app list|mode|add|remove|enable|disable
   netproxyctl [--json] [--timeout <秒|时长>] ebpf status [configured|all|local|shared] [--raw]
   netproxyctl [--json] [--timeout <秒|时长>] config list|read|check|validate|apply
+  netproxyctl [--json] [--timeout <秒|时长>] preset list|apply <名称> [--restart] [--lang <zh|ru|en>]
   netproxyctl [--json] [--timeout <秒|时长>] logs show|clear|export
+
+preset list 列出预设路由规则模板；preset apply <名称> 原子应用预设并保留已有接口与出站。
 
 节点引用固定为 <group-id>/<tag>；自动模式使用 node use auto [分组]。
 node import <文件> 会将文件中的全部节点追加到 default 本地配置组。

@@ -45,8 +45,23 @@ type NodeSummary struct {
 	Port     uint16 `json:"port,omitzero"`
 }
 
+// ParserFunc 定义通用文档解析器函数签名
+type ParserFunc func(ctx context.Context, content string, allowInsecure bool) (ParseResult, error)
+
+var defaultContentParser ParserFunc
+
+// SetDefaultParser 注册全局文档解析器
+func SetDefaultParser(parser ParserFunc) {
+	defaultContentParser = parser
+}
+
 func ParseDocument(ctx context.Context, content []byte) (Document, error) {
 	ctx = Context(ctx)
+	if defaultContentParser != nil {
+		if result, err := defaultContentParser(ctx, string(content), false); err == nil && len(result.Document.Outbounds)+len(result.Document.Endpoints) > 0 {
+			return result.Document, nil
+		}
+	}
 	outbounds, endpoints, err := providerparser.ParseBoxSubscription(ctx, string(content))
 	if err != nil {
 		return Document{}, err

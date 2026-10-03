@@ -124,7 +124,7 @@ func Scan(ctx context.Context, options ScanOptions) ([]GroupSnapshot, error) {
 			if err != nil {
 				return nil, fmt.Errorf("读取分组 %s Provider: %w", group.ID, err)
 			}
-			group.Nodes = nodes
+			group.Nodes = group.Metadata.FilterNodes(nodes)
 		}
 		summary := summaryFor(group, options.ActiveGroup, options.ProgressDir)
 		nodes := []provider.NodeSummary{}
@@ -438,7 +438,22 @@ func containsNode(ctx context.Context, group *loadedGroup, reference string) (bo
 	if !found || groupID != group.ID || tag == "" {
 		return false, nil
 	}
+	if !group.Metadata.MatchesTag(tag) {
+		return false, nil
+	}
 	return provider.FileContainsTag(ctx, group.ProviderPath, tag)
+}
+
+// compileBadRegexp 将正则表达式文本安全编译为 sing-box badoption.Regexp 指针。
+func compileBadRegexp(pattern string) *badoption.Regexp {
+	if strings.TrimSpace(pattern) == "" {
+		return nil
+	}
+	reg, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil
+	}
+	return (*badoption.Regexp)(reg)
 }
 
 func writeRuntimeProviders(path string, groups []*loadedGroup) error {
@@ -468,16 +483,62 @@ func writeRuntimeOutbounds(path string, groups []*loadedGroup, activeTag, select
 		{Type: C.TypeDirect, Tag: "direct", Options: new(option.DirectOutboundOptions)},
 		{Type: C.TypeBlock, Tag: "block", Options: new(option.StubOptions)},
 	}
-	options := make([]string, 0, len(groups)*2)
+
+	// 收集所有包含有效节点的活动 Provider 运行时标签。
+	allGroupTags := make([]string, 0, len(groups))
+	for _, group := range groups {
+		if group.hasNodes || group.Metadata.NodeCount > 0 {
+			allGroupTags = append(allGroupTags, group.RuntimeTag)
+		}
+	}
+
+	options := make([]string, 0, len(groups)*2+2)
+	// 若活动分组达到两个及以上，自动生成跨分组聚合出站并置顶至 Proxy 选项。
+	if len(allGroupTags) >= 2 {
+		outbounds = append(outbounds,
+			option.Outbound{
+				Type: C.TypeURLTest,
+				Tag:  "Auto/All",
+				Options: &option.URLTestOutboundOptions{
+					GroupCommonOption: option.GroupCommonOption{
+						Providers: allGroupTags,
+					},
+					URL:                       "https://www.gstatic.com/generate_204",
+					Interval:                  badoption.Duration(3 * time.Minute),
+					Tolerance:                 50,
+					InterruptExistConnections: true,
+				},
+			},
+			option.Outbound{
+				Type: C.TypeSelector,
+				Tag:  "Select/All",
+				Options: &option.SelectorOutboundOptions{
+					GroupCommonOption: option.GroupCommonOption{
+						Providers: allGroupTags,
+					},
+					InterruptExistConnections: true,
+				},
+			},
+		)
+		options = append(options, "Auto/All", "Select/All")
+	}
+
 	for _, group := range groups {
 		autoTag := "Auto/" + group.RuntimeTag
 		selectTag := "Select/" + group.RuntimeTag
+		includeRegex := compileBadRegexp(group.Metadata.Include)
+		excludeRegex := compileBadRegexp(group.Metadata.Exclude)
+
 		outbounds = append(outbounds,
 			option.Outbound{
 				Type: C.TypeURLTest,
 				Tag:  autoTag,
 				Options: &option.URLTestOutboundOptions{
-					Providers:                 []string{group.RuntimeTag},
+					GroupCommonOption: option.GroupCommonOption{
+						Providers: []string{group.RuntimeTag},
+						Include:   includeRegex,
+						Exclude:   excludeRegex,
+					},
 					URL:                       "https://www.gstatic.com/generate_204",
 					Interval:                  badoption.Duration(3 * time.Minute),
 					Tolerance:                 50,
@@ -488,7 +549,11 @@ func writeRuntimeOutbounds(path string, groups []*loadedGroup, activeTag, select
 				Type: C.TypeSelector,
 				Tag:  selectTag,
 				Options: &option.SelectorOutboundOptions{
-					Providers:                 []string{group.RuntimeTag},
+					GroupCommonOption: option.GroupCommonOption{
+						Providers: []string{group.RuntimeTag},
+						Include:   includeRegex,
+						Exclude:   excludeRegex,
+					},
 					InterruptExistConnections: true,
 				},
 			},
@@ -503,7 +568,9 @@ func writeRuntimeOutbounds(path string, groups []*loadedGroup, activeTag, select
 		Type: C.TypeSelector,
 		Tag:  "Proxy",
 		Options: &option.SelectorOutboundOptions{
-			Outbounds:                 options,
+			GroupCommonOption: option.GroupCommonOption{
+				Outbounds: options,
+			},
 			Default:                   defaultTag,
 			InterruptExistConnections: true,
 		},
@@ -525,7 +592,7 @@ func writeRuntimeOutboundsAtomic(path string, outbounds []option.Outbound) error
 		return err
 	}
 	for _, outbound := range document.Outbounds {
-		for _, field := range []string{"outbounds", "providers"} {
+		for _, field := range []string{"outbounds", "providers", "include", "exclude"} {
 			if value, exists := outbound[field]; exists && bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
 				delete(outbound, field)
 			}

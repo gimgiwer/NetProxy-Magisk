@@ -1,0 +1,237 @@
+{
+  "$schema": "https://raw.githubusercontent.com/reF1nd/sing-box/reF1nd-testing-next/docs/schema.json",
+  "name": "bypass-lan",
+  "description": "Проксировать весь интернет, напрямую только локальные сети (RFC1918 / LAN)",
+  "descriptions": {
+    "zh": "绕过局域网预设（全局代理整个互联网，仅保留局域网与私有 IP 直连）",
+    "en": "Bypass LAN preset (proxy all internet traffic, direct only local / RFC1918 private subnets)",
+    "ru": "Проксировать весь интернет, напрямую только локальные сети (RFC1918 / LAN)"
+  },
+  "log": {
+    "disabled": false,
+    "level": "info",
+    "output": "/data/adb/modules/netproxy/logs/sing-box.log",
+    "timestamp": true
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "/data/adb/modules/netproxy/config/singbox/cache.db"
+    },
+    "clash_api": {
+      "default_mode": "Rule",
+      "external_controller": "127.0.0.1:9999",
+      "secret": "singbox"
+    }
+  },
+  "services": [
+    {
+      "type": "api",
+      "listen": "127.0.0.1",
+      "listen_port": 9090,
+      "secret": "singbox",
+      "dashboard": {
+        "enabled": true,
+        "path": "/data/adb/modules/netproxy/webroot/sing-box-dashboard",
+        "http_client": "s-download"
+      }
+    }
+  ],
+  "http_clients": [
+    {
+      "tag": "s-download",
+      "detour": "Proxy"
+    }
+  ],
+  "dns": {
+    "servers": [
+      {
+        "tag": "dns-proxy",
+        "type": "group",
+        "servers": [
+          "cloudflare",
+          "google"
+        ]
+      },
+      {
+        "tag": "dns-direct",
+        "type": "udp",
+        "server": "223.5.5.5"
+      },
+      {
+        "type": "hosts",
+        "tag": "hosts",
+        "predefined": {
+          "cloudflare-dns.com": [
+            "1.1.1.1",
+            "1.0.0.1"
+          ],
+          "dns.google": [
+            "8.8.8.8",
+            "8.8.4.4"
+          ]
+        }
+      },
+      {
+        "tag": "cloudflare",
+        "type": "https",
+        "server": "cloudflare-dns.com",
+        "domain_resolver": "hosts",
+        "detour": "Proxy"
+      },
+      {
+        "tag": "google",
+        "type": "https",
+        "server": "dns.google",
+        "domain_resolver": "hosts",
+        "detour": "Proxy"
+      }
+    ],
+    "rules": [
+      { "clash_mode": "Direct", "action": "route", "server": "dns-direct" },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          { "clash_mode": "AllowAds", "invert": true },
+          { "rule_set": ["block", "Ads_AWAvenue", "geosite/category-ads-all"] }
+        ],
+        "action": "reject"
+      },
+      {
+        "domain_suffix": [
+          ".local",
+          ".lan",
+          ".internal",
+          ".home.arpa"
+        ],
+        "action": "route",
+        "server": "dns-direct"
+      }
+    ],
+    "final": "dns-proxy",
+    "optimistic": true,
+    "strategy": "prefer_ipv4"
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 7080
+    }
+  ],
+  "route": {
+    "default_domain_resolver": "dns-proxy",
+    "rule_set": [
+      {
+        "type": "local",
+        "tag": [
+          "block",
+          "direct",
+          "proxy"
+        ],
+        "format": "source",
+        "path": "./rules/local/{tag}.json"
+      },
+      {
+        "type": "remote",
+        "tag": "Ads_AWAvenue",
+        "format": "source",
+        "url": "https://raw.githubusercontent.com/TG-Twilight/AWAvenue-Ads-Rule/main/Filters/AWAvenue-Ads-Rule-Singbox.json",
+        "update_interval": "24h",
+        "path": "./rules/remote/Ads_AWAvenue.json"
+      },
+      {
+        "type": "remote",
+        "tag": [
+          "geosite/category-ads-all"
+        ],
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/{tag}.srs",
+        "update_interval": "24h",
+        "path": "./rules/remote/{tag}.srs"
+      }
+    ],
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "port": 53
+          },
+          {
+            "protocol": "dns"
+          }
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "clash_mode": "Direct",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "clash_mode": "AllowAds",
+            "invert": true
+          },
+          {
+            "rule_set": [
+              "block",
+              "Ads_AWAvenue",
+              "geosite/category-ads-all"
+            ]
+          }
+        ],
+        "action": "reject"
+      },
+      {
+        "rule_set": "direct",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "domain": [
+          "localhost"
+        ],
+        "domain_suffix": [
+          ".local",
+          ".lan",
+          ".internal",
+          ".home.arpa"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "127.0.0.0/8",
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "169.254.0.0/16",
+          "::1/128",
+          "fc00::/7",
+          "fe80::/10"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ],
+    "find_process": true,
+    "auto_detect_interface": true,
+    "final": "Proxy"
+  }
+}

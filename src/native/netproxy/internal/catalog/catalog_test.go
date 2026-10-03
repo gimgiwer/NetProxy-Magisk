@@ -408,3 +408,211 @@ func updateNodeCount(t *testing.T, path string, nodeCount int) {
 		t.Fatal(err)
 	}
 }
+
+func TestBuildRuntimeAggregatedOutbounds(t *testing.T) {
+	// 测试单个分组时不应生成 Auto/All 与 Select/All
+	t.Run("single group does not generate all groups", func(t *testing.T) {
+		root := t.TempDir()
+		writeGroup(t, root, "sub1", "订阅一", "subscription", "节点一")
+		runtimeDir := t.TempDir()
+		providersPath := filepath.Join(runtimeDir, "providers.json")
+		outboundsPath := filepath.Join(runtimeDir, "outbounds.json")
+
+		result, err := BuildRuntime(context.Background(), RuntimeOptions{
+			Root: root, ProvidersOutput: providersPath, OutboundsOutput: outboundsPath,
+			ActiveGroup: "sub1", SelectorMode: "urltest",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.GroupCount != 1 {
+			t.Fatalf("expected 1 group, got %d", result.GroupCount)
+		}
+
+		outbounds := readFile(t, outboundsPath)
+		if strings.Contains(outbounds, `"Auto/All"`) || strings.Contains(outbounds, `"Select/All"`) {
+			t.Fatalf("single group runtime should not contain Auto/All or Select/All: %s", outbounds)
+		}
+	})
+
+	// 测试两个及以上分组时自动生成 Auto/All 与 Select/All 并置顶至 Proxy 选项
+	t.Run("multiple groups generate Auto/All and Select/All", func(t *testing.T) {
+		root := t.TempDir()
+		writeGroup(t, root, "sub1", "订阅一", "subscription", "节点一")
+		writeGroup(t, root, "sub2", "订阅二", "subscription", "节点二")
+		runtimeDir := t.TempDir()
+		providersPath := filepath.Join(runtimeDir, "providers.json")
+		outboundsPath := filepath.Join(runtimeDir, "outbounds.json")
+
+		result, err := BuildRuntime(context.Background(), RuntimeOptions{
+			Root: root, ProvidersOutput: providersPath, OutboundsOutput: outboundsPath,
+			ActiveGroup: "sub1", SelectorMode: "urltest",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.GroupCount != 2 {
+			t.Fatalf("expected 2 groups, got %d", result.GroupCount)
+		}
+
+		outbounds := readFile(t, outboundsPath)
+		if !strings.Contains(outbounds, `"tag": "Auto/All"`) {
+			t.Fatalf("missing Auto/All in outbounds: %s", outbounds)
+		}
+		if !strings.Contains(outbounds, `"tag": "Select/All"`) {
+			t.Fatalf("missing Select/All in outbounds: %s", outbounds)
+		}
+
+		var doc struct {
+			Outbounds []struct {
+				Type                       string   `json:"type"`
+				Tag                        string   `json:"tag"`
+				Providers                  []string `json:"providers"`
+				Outbounds                  []string `json:"outbounds"`
+				URL                        string   `json:"url"`
+				Interval                   string   `json:"interval"`
+				Tolerance                  int      `json:"tolerance"`
+				InterruptExistConnections bool     `json:"interrupt_exist_connections"`
+			} `json:"outbounds"`
+		}
+		if err := json.Unmarshal([]byte(outbounds), &doc); err != nil {
+			t.Fatalf("unmarshal outbounds: %v", err)
+		}
+
+		var foundAutoAll, foundSelectAll, foundProxy bool
+		for _, ob := range doc.Outbounds {
+			switch ob.Tag {
+			case "Auto/All":
+				foundAutoAll = true
+				if ob.Type != "urltest" {
+					t.Fatalf("Auto/All type = %q, expected urltest", ob.Type)
+				}
+				if len(ob.Providers) != 2 || ob.Providers[0] != "订阅一" || ob.Providers[1] != "订阅二" {
+					t.Fatalf("Auto/All providers = %#v", ob.Providers)
+				}
+				if ob.URL != "https://www.gstatic.com/generate_204" {
+					t.Fatalf("Auto/All url = %q", ob.URL)
+				}
+				if ob.Tolerance != 50 {
+					t.Fatalf("Auto/All tolerance = %d", ob.Tolerance)
+				}
+				if !ob.InterruptExistConnections {
+					t.Fatalf("Auto/All interrupt_exist_connections = false")
+				}
+			case "Select/All":
+				foundSelectAll = true
+				if ob.Type != "selector" {
+					t.Fatalf("Select/All type = %q, expected selector", ob.Type)
+				}
+				if len(ob.Providers) != 2 || ob.Providers[0] != "订阅一" || ob.Providers[1] != "订阅二" {
+					t.Fatalf("Select/All providers = %#v", ob.Providers)
+				}
+				if !ob.InterruptExistConnections {
+					t.Fatalf("Select/All interrupt_exist_connections = false")
+				}
+			case "Proxy":
+				foundProxy = true
+				if len(ob.Outbounds) < 2 || ob.Outbounds[0] != "Auto/All" || ob.Outbounds[1] != "Select/All" {
+					t.Fatalf("Proxy outbounds top elements must be Auto/All and Select/All, got: %#v", ob.Outbounds)
+				}
+			}
+		}
+		if !foundAutoAll || !foundSelectAll || !foundProxy {
+			t.Fatalf("missing required outbounds: auto=%v, select=%v, proxy=%v", foundAutoAll, foundSelectAll, foundProxy)
+		}
+	})
+
+	// 测试其中一个分组无节点时不应生成 Auto/All 与 Select/All
+	t.Run("multiple groups with one empty does not generate all groups", func(t *testing.T) {
+		root := t.TempDir()
+		writeGroup(t, root, "sub1", "订阅一", "subscription", "节点一")
+		writeGroup(t, root, "empty", "空订阅", "subscription", "待定")
+		updateNodeCount(t, filepath.Join(root, "empty", "meta.json"), 0)
+		runtimeDir := t.TempDir()
+		providersPath := filepath.Join(runtimeDir, "providers.json")
+		outboundsPath := filepath.Join(runtimeDir, "outbounds.json")
+
+		result, err := BuildRuntime(context.Background(), RuntimeOptions{
+			Root: root, ProvidersOutput: providersPath, OutboundsOutput: outboundsPath,
+			ActiveGroup: "sub1", SelectorMode: "urltest",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.GroupCount != 1 {
+			t.Fatalf("expected 1 active group, got %d", result.GroupCount)
+		}
+
+		outbounds := readFile(t, outboundsPath)
+		if strings.Contains(outbounds, `"Auto/All"`) || strings.Contains(outbounds, `"Select/All"`) {
+			t.Fatalf("runtime with single active group should not contain Auto/All or Select/All: %s", outbounds)
+		}
+	})
+}
+
+func TestBuildRuntimeFilteringAndMetadata(t *testing.T) {
+	// 测试元数据正则 include 与 exclude 写入运行时出站规则
+	t.Run("metadata include and exclude filtering in outbounds", func(t *testing.T) {
+		root := t.TempDir()
+		writeGroup(t, root, "sub1", "订阅一", "subscription", "HK-01")
+		metaPath := filepath.Join(root, "sub1", "meta.json")
+		content := readFile(t, metaPath)
+		var meta Metadata
+		if err := json.Unmarshal([]byte(content), &meta); err != nil {
+			t.Fatal(err)
+		}
+		meta.Include = "^HK"
+		meta.Exclude = ".*backup.*"
+		if err := SaveMetadataAtomic(context.Background(), metaPath, meta); err != nil {
+			t.Fatal(err)
+		}
+
+		runtimeDir := t.TempDir()
+		providersPath := filepath.Join(runtimeDir, "providers.json")
+		outboundsPath := filepath.Join(runtimeDir, "outbounds.json")
+
+		_, err := BuildRuntime(context.Background(), RuntimeOptions{
+			Root: root, ProvidersOutput: providersPath, OutboundsOutput: outboundsPath,
+			ActiveGroup: "sub1", SelectorMode: "urltest",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		outbounds := readFile(t, outboundsPath)
+		if !strings.Contains(outbounds, `"include": "^HK"`) {
+			t.Fatalf("outbounds missing include regex: %s", outbounds)
+		}
+		if !strings.Contains(outbounds, `"exclude": ".*backup.*"`) {
+			t.Fatalf("outbounds missing exclude regex: %s", outbounds)
+		}
+	})
+
+	// 测试元数据辅助方法的标签匹配与非法正则校验
+	t.Run("metadata methods for filtering and validation", func(t *testing.T) {
+		meta := Metadata{
+			Include: "^(US|HK)",
+			Exclude: ".*VIP.*",
+		}
+		if err := meta.ValidateFilter(); err != nil {
+			t.Fatalf("valid filter validation failed: %v", err)
+		}
+		if !meta.MatchesTag("HK-01") {
+			t.Fatalf("expected HK-01 to match")
+		}
+		if !meta.MatchesTag("US-02") {
+			t.Fatalf("expected US-02 to match")
+		}
+		if meta.MatchesTag("HK-VIP") {
+			t.Fatalf("expected HK-VIP to be excluded")
+		}
+		if meta.MatchesTag("JP-01") {
+			t.Fatalf("expected JP-01 to be excluded by include rule")
+		}
+
+		invalidMeta := Metadata{Include: "[unclosed"}
+		if err := invalidMeta.ValidateFilter(); err == nil {
+			t.Fatalf("expected invalid regex to fail validation")
+		}
+	})
+}

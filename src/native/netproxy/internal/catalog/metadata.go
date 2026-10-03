@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -235,4 +236,60 @@ func NormalizeMetadata(metadata Metadata) Metadata {
 		metadata.RuntimeSyncState = "not_running"
 	}
 	return metadata
+}
+
+// MatchesTag 检查指定节点标签是否符合元数据的 include 与 exclude 正则过滤规则。
+func (m Metadata) MatchesTag(tag string) bool {
+	if m.Include != "" {
+		if reg, err := regexp.Compile(m.Include); err == nil {
+			if !reg.MatchString(tag) {
+				return false
+			}
+		}
+	}
+	if m.Exclude != "" {
+		if reg, err := regexp.Compile(m.Exclude); err == nil {
+			if reg.MatchString(tag) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// FilterNodes 根据元数据的 include 与 exclude 正则过滤规则筛选节点摘要列表。
+func (m Metadata) FilterNodes(nodes []provider.NodeSummary) []provider.NodeSummary {
+	if m.Include == "" && m.Exclude == "" {
+		return nodes
+	}
+	filtered := make([]provider.NodeSummary, 0, len(nodes))
+	for _, node := range nodes {
+		if m.MatchesTag(node.Tag) {
+			filtered = append(filtered, node)
+		}
+	}
+	return filtered
+}
+
+// FilterDocument 根据元数据的 include 与 exclude 正则过滤规则筛选 Provider 文档节点。
+func (m Metadata) FilterDocument(document provider.Document) (provider.Document, error) {
+	if m.Include == "" && m.Exclude == "" {
+		return document, nil
+	}
+	return provider.Filter(document, m.Include, m.Exclude)
+}
+
+// ValidateFilter 校验元数据中的 include 与 exclude 正则表达式语法是否合法。
+func (m Metadata) ValidateFilter() error {
+	if m.Include != "" {
+		if _, err := regexp.Compile(m.Include); err != nil {
+			return fmt.Errorf("无效的 include 正则表达式: %w", err)
+		}
+	}
+	if m.Exclude != "" {
+		if _, err := regexp.Compile(m.Exclude); err != nil {
+			return fmt.Errorf("无效的 exclude 正则表达式: %w", err)
+		}
+	}
+	return nil
 }

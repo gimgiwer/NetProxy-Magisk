@@ -86,6 +86,8 @@ func (c *cli) run(ctx context.Context, args []string) int {
 		handler = c.ebpf
 	case "config":
 		handler = c.config
+	case "preset":
+		handler = c.preset
 	case "logs":
 		handler = c.logs
 	default:

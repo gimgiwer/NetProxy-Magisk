@@ -107,6 +107,7 @@
     "currentVersion": "v1.15.0-alpha.8-reF1nd",
     "buildTags": [
       "with_quic",
+      "with_wireguard_go",
       "with_utls",
       "with_clash_api",
       "with_gvisor",

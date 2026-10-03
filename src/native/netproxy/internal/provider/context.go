@@ -27,6 +27,7 @@ func (outboundOptionsRegistry) OptionTypes() []string {
 		C.TypeTUIC,
 		C.TypeVLESS,
 		C.TypeVMess,
+		C.TypeWireGuard,
 	}
 }
 
@@ -62,6 +63,8 @@ func (outboundOptionsRegistry) CreateOptions(outboundType string) (any, bool) {
 		return new(option.VLESSOutboundOptions), true
 	case C.TypeVMess:
 		return new(option.VMessOutboundOptions), true
+	case C.TypeWireGuard:
+		return new(option.WireGuardEndpointOptions), true
 	default:
 		return nil, false
 	}

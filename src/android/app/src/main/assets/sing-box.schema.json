@@ -5853,6 +5853,104 @@
             },
             "fallback_delay": {
               "$ref": "#/$defs/Duration"
+            },
+            "jc": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "jmin": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "jmax": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s1": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s2": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s3": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s4": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "h1": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h2": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h3": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h4": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "i1": {
+              "type": "string"
+            },
+            "i2": {
+              "type": "string"
+            },
+            "i3": {
+              "type": "string"
+            },
+            "i4": {
+              "type": "string"
+            },
+            "i5": {
+              "type": "string"
             }
           },
           "required": [
@@ -16935,6 +17033,175 @@
             "type"
           ],
           "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "wireguard"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "server": {
+              "type": "string"
+            },
+            "server_port": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "system_interface": {
+              "type": "boolean"
+            },
+            "interface_name": {
+              "type": "string"
+            },
+            "local_address": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/IPPrefix"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/IPPrefix"
+                  }
+                }
+              ]
+            },
+            "private_key": {
+              "type": "string"
+            },
+            "peer_public_key": {
+              "type": "string"
+            },
+            "pre_shared_key": {
+              "type": "string"
+            },
+            "reserved": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                }
+              ]
+            },
+            "mtu": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "jc": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "jmin": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "jmax": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s1": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s2": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s3": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "s4": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "h1": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h2": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h3": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "h4": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "i1": {
+              "type": "string"
+            },
+            "i2": {
+              "type": "string"
+            },
+            "i3": {
+              "type": "string"
+            },
+            "i4": {
+              "type": "string"
+            },
+            "i5": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
         }
       ]
     },
@@ -21453,8 +21720,569 @@
               }
             }
           ]
+        },
+        "jc": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "jmin": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "jmax": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s1": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s2": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s3": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s4": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "h1": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h2": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h3": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h4": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "i1": {
+          "type": "string"
+        },
+        "i2": {
+          "type": "string"
+        },
+        "i3": {
+          "type": "string"
+        },
+        "i4": {
+          "type": "string"
+        },
+        "i5": {
+          "type": "string"
         }
       },
+      "additionalProperties": false
+    },
+    "WireGuardEndpointOptions": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "wireguard"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "system": {
+          "type": "boolean"
+        },
+        "gso": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "mtu": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "address": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IPPrefix"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/IPPrefix"
+              }
+            }
+          ]
+        },
+        "private_key": {
+          "type": "string"
+        },
+        "listen_port": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WireGuardPeer"
+          }
+        },
+        "udp_timeout": {
+          "$ref": "#/$defs/Duration"
+        },
+        "udp_mapping": {
+          "type": "string",
+          "enum": [
+            "",
+            "endpoint_independent",
+            "address_dependent",
+            "address_and_port_dependent"
+          ]
+        },
+        "udp_filtering": {
+          "type": "string",
+          "enum": [
+            "",
+            "endpoint_independent",
+            "address_dependent",
+            "address_and_port_dependent"
+          ]
+        },
+        "udp_nat_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "workers": {
+          "type": "integer"
+        },
+        "on_demand": {
+          "type": "boolean"
+        },
+        "inner_domain_resolver": {
+          "$ref": "#/$defs/DomainResolver"
+        },
+        "detour": {
+          "type": "string",
+          "x-tag-reference": "outbound"
+        },
+        "bind_interface": {
+          "type": "string"
+        },
+        "inet4_bind_address": {
+          "$ref": "#/$defs/IPAddress"
+        },
+        "inet6_bind_address": {
+          "$ref": "#/$defs/IPAddress"
+        },
+        "bind_address_no_port": {
+          "type": "boolean"
+        },
+        "protect_path": {
+          "type": "string"
+        },
+        "routing_mark": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "reuse_addr": {
+          "type": "boolean"
+        },
+        "netns": {
+          "type": "string",
+          "x-tag-reference": "network_namespace"
+        },
+        "connect_timeout": {
+          "$ref": "#/$defs/Duration"
+        },
+        "tcp_fast_open": {
+          "type": "boolean"
+        },
+        "tcp_multi_path": {
+          "type": "boolean"
+        },
+        "disable_tcp_keep_alive": {
+          "type": "boolean"
+        },
+        "tcp_keep_alive": {
+          "$ref": "#/$defs/Duration"
+        },
+        "tcp_keep_alive_interval": {
+          "$ref": "#/$defs/Duration"
+        },
+        "tcp_keep_alive_count": {
+          "type": "integer"
+        },
+        "udp_gso": {
+          "type": "boolean"
+        },
+        "udp_fragment": {
+          "type": "boolean"
+        },
+        "domain_resolver": {
+          "$ref": "#/$defs/DomainResolver"
+        },
+        "network_strategy": {
+          "type": "string",
+          "enum": [
+            "default",
+            "fallback",
+            "hybrid"
+          ]
+        },
+        "network_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceType"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/InterfaceType"
+              }
+            }
+          ]
+        },
+        "fallback_network_type": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InterfaceType"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/InterfaceType"
+              }
+            }
+          ]
+        },
+        "fallback_delay": {
+          "$ref": "#/$defs/Duration"
+        },
+        "jc": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "jmin": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "jmax": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s1": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s2": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s3": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s4": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "h1": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h2": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h3": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h4": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "i1": {
+          "type": "string"
+        },
+        "i2": {
+          "type": "string"
+        },
+        "i3": {
+          "type": "string"
+        },
+        "i4": {
+          "type": "string"
+        },
+        "i5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "WireGuardOutboundOptions": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "wireguard"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "server_port": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "system_interface": {
+          "type": "boolean"
+        },
+        "interface_name": {
+          "type": "string"
+        },
+        "local_address": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IPPrefix"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/IPPrefix"
+              }
+            }
+          ]
+        },
+        "private_key": {
+          "type": "string"
+        },
+        "peer_public_key": {
+          "type": "string"
+        },
+        "pre_shared_key": {
+          "type": "string"
+        },
+        "reserved": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            }
+          ]
+        },
+        "mtu": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "jc": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "jmin": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "jmax": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s1": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s2": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s3": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "s4": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "h1": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h2": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h3": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "h4": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "i1": {
+          "type": "string"
+        },
+        "i2": {
+          "type": "string"
+        },
+        "i3": {
+          "type": "string"
+        },
+        "i4": {
+          "type": "string"
+        },
+        "i5": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     }
   }
