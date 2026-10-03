@@ -13,7 +13,7 @@ const useMock = import.meta.env.DEV && !inKsu
 const shq = (v: string) => `'${v.replace(/'/g, `'"'"'`)}'`
 
 async function run(cmd: string): Promise<ExecResult> {
-  if (!inKsu) return { out: '', err: t('common.not_ksu_env'), code: 0 }
+  if (!inKsu) return { out: '', err: t('common.not_ksu_env'), code: 1 }
   try { const r = await exec(cmd); return { out: r.stdout, err: r.stderr, code: r.errno } }
   catch (e: any) { return { out: '', err: e?.message || String(e), code: -1 } }
 }

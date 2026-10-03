@@ -1,20 +1,20 @@
-import { complete } from './autocomplete'
-import { parseCommandLine } from './command'
-import { ctl, ctlJson, shell, inKsu, completions as fetchCompletions } from './exec'
-import { formatCtlOutput } from './format'
-import { getHelp } from './help'
-import { getLocale, setLocale, onLocaleChange, t, getSupportedLocales } from './i18n.ts'
-import { createPoller } from './polling'
+import { ctl, ctlJson, shell, inKsu, completions as fetchCompletions } from './exec.ts'
+import { complete, replaceCompletion } from './autocomplete.ts'
+import { parseCommandLine } from './command.ts'
+import { decodeCtlResult } from './contract.ts'
+import { formatCtlOutput } from './format.ts'
+import { getHelp } from './help.ts'
+import { createPoller } from './polling.ts'
+import { t, getLocale, setLocale, getSupportedLocales, onLocaleChange } from './i18n.ts'
 import './style.css'
 
-const PROMPT = '❯ '
-const STATE_COLORS: Record<string, string> = {
-  ready: 'var(--good)',
-  stopped: 'var(--text-faint)',
-  failed: 'var(--danger)',
-  starting: 'var(--medium)',
-  stopping: 'var(--medium)',
-  preparing: 'var(--medium)',
+const STATE_MAP: Record<string, { key: string; color: string }> = {
+  ready: { key: 'states.ready', color: 'var(--good)' },
+  stopped: { key: 'states.stopped', color: 'var(--secondary)' },
+  failed: { key: 'states.failed', color: 'var(--danger)' },
+  starting: { key: 'states.starting', color: 'var(--medium)' },
+  stopping: { key: 'states.stopping', color: 'var(--medium)' },
+  preparing: { key: 'states.preparing', color: 'var(--medium)' },
 }
 
 function byId<T extends HTMLElement>(id: string): T {
@@ -23,68 +23,88 @@ function byId<T extends HTMLElement>(id: string): T {
   return element as T
 }
 
-const terminal = byId<HTMLDivElement>('terminal')
-const output = byId<HTMLDivElement>('output')
+const output = byId<HTMLElement>('output')
+const welcome = byId<HTMLElement>('welcome')
+const form = byId<HTMLFormElement>('command-form')
 const input = byId<HTMLInputElement>('command-input')
+const suggestions = byId<HTMLElement>('suggestions')
 const completeButton = byId<HTMLButtonElement>('complete')
 const previousButton = byId<HTMLButtonElement>('history-prev')
 const nextButton = byId<HTMLButtonElement>('history-next')
 const runButton = byId<HTMLButtonElement>('run')
-const serviceStatus = byId<HTMLSpanElement>('service-status')
-const serviceLabel = byId<HTMLSpanElement>('service-label')
+const copyButton = byId<HTMLButtonElement>('copy')
+const clearButton = byId<HTMLButtonElement>('clear')
+const latestButton = byId<HTMLButtonElement>('latest')
+const serviceStatus = byId<HTMLButtonElement>('service-status')
 const serviceState = byId<HTMLElement>('service-state')
+const announcement = byId<HTMLElement>('announcement')
+const entryTemplate = byId<HTMLTemplateElement>('command-entry')
 const langSelect = byId<HTMLSelectElement>('lang-select')
-const environment = byId<HTMLSpanElement>('environment')
-const buttons = [completeButton, previousButton, nextButton, runButton]
-const busyLine = document.createElement('pre')
-busyLine.className = 'busy'
-busyLine.append(Object.assign(document.createElement('span'), { className: 'spinner' }))
+const environment = byId<HTMLElement>('environment')
 
-let history: string[] = []
+const history: string[] = []
 let historyIndex = -1
-let tabCount = 0
+let draft = ''
 let busy = false
+let composing = false
+let followOutput = true
+let scrollFrame = 0
+let lastResult = ''
 let knownGroups: string[] = []
 let knownSubscriptions: string[] = []
-let lastServiceState: string | undefined
-let outputHasOnlyHelp = true
+let completionRevision = 0
 
-function scrollToBottom() {
-  requestAnimationFrame(() => { output.scrollTop = output.scrollHeight })
+let lastServiceStateRaw: string | undefined
+let lastServiceOk = false
+let lastServiceMessage = ''
+
+function announce(message: string) {
+  announcement.textContent = message
 }
 
-function append(kind: 'i' | 'o' | 'e' | 'help', text: string) {
-  const line = document.createElement('pre')
-  line.className = kind
-  line.textContent = text
-  output.insertBefore(line, busyLine.isConnected ? busyLine : null)
-  scrollToBottom()
+function updateControls() {
+  runButton.disabled = busy || !input.value.trim()
+  completeButton.disabled = busy
+  previousButton.disabled = busy || !history.length || historyIndex === 0
+  nextButton.disabled = busy || historyIndex === -1
+  clearButton.disabled = busy || !output.querySelector('.entry')
+  copyButton.disabled = !lastResult
+  serviceStatus.disabled = busy
 }
 
-function appendCandidates(candidates: string[]) {
-  const line = document.createElement('div')
-  line.className = 'cands'
-  for (const candidate of candidates) {
-    const item = document.createElement('span')
-    item.textContent = candidate
-    line.append(item)
-  }
-  output.insertBefore(line, busyLine.isConnected ? busyLine : null)
-  scrollToBottom()
+function scrollToLatest(force = false) {
+  if (force) followOutput = true
+  if (scrollFrame) cancelAnimationFrame(scrollFrame)
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0
+    if (followOutput) output.scrollTop = output.scrollHeight
+    latestButton.hidden = output.scrollHeight - output.clientHeight - output.scrollTop < 24
+  })
 }
 
-function setBusy(value: boolean) {
-  busy = value
-  for (const button of buttons) button.disabled = value
-  runButton.textContent = value ? '…' : '↵'
-  if (value) output.append(busyLine)
-  else busyLine.remove()
-  scrollToBottom()
+function closeSuggestions() {
+  suggestions.hidden = true
+  suggestions.replaceChildren()
+}
+
+function focusInput() {
+  input.focus({ preventScroll: true })
+  input.setSelectionRange(input.value.length, input.value.length)
+}
+
+function setInput(value: string) {
+  input.value = value
+  historyIndex = -1
+  closeSuggestions()
+  updateControls()
+  focusInput()
 }
 
 async function refreshCompletions() {
+  const revision = ++completionRevision
   try {
     const result = await fetchCompletions()
+    if (revision !== completionRevision) return
     knownGroups = result.groups
     knownSubscriptions = result.subs
   } catch {
@@ -92,22 +112,181 @@ async function refreshCompletions() {
   }
 }
 
-function renderServiceState(state?: string) {
-  lastServiceState = state
-  if (!state) {
+function renderServiceState() {
+  if (lastServiceStateRaw === undefined && !lastServiceOk && !lastServiceMessage) {
     serviceState.textContent = t('states.detecting')
-    serviceState.style.color = 'var(--text-faint)'
+    serviceStatus.style.setProperty('--state-color', 'var(--secondary)')
+    serviceStatus.title = `${t('states.detecting')} · ${t('common.status_click_hint')}`
     return
   }
-  const translated = t(`states.${state}`)
-  serviceState.textContent = translated !== `states.${state}` ? translated : state
-  serviceState.style.color = STATE_COLORS[state] || 'var(--text-faint)'
+  const stateMeta = lastServiceStateRaw ? STATE_MAP[lastServiceStateRaw] : undefined
+  const label = stateMeta ? t(stateMeta.key) : (lastServiceStateRaw ? (t(`states.${lastServiceStateRaw}`) || lastServiceStateRaw) : t('common.status_unavailable'))
+  serviceState.textContent = label
+  serviceStatus.style.setProperty('--state-color', stateMeta?.color || (lastServiceOk ? 'var(--good)' : 'var(--danger)'))
+  serviceStatus.title = `${label} · ${t('common.status_click_hint')}${lastServiceOk ? '' : '：' + lastServiceMessage}`
 }
 
-function renderStatusBar() {
-  serviceLabel.textContent = t('common.service')
-  renderServiceState(lastServiceState)
+const statusPoller = createPoller(
+  () => ctlJson<{ state?: string }>(['service', 'status']),
+  result => {
+    lastServiceOk = result.ok
+    lastServiceStateRaw = result.ok ? (result.data?.state || '') : undefined
+    lastServiceMessage = result.message || ''
+    renderServiceState()
+  },
+)
+
+function clearOutput() {
+  output.replaceChildren(welcome)
+  lastResult = ''
+  copyButton.textContent = t('common.copy')
+  latestButton.hidden = true
+  followOutput = true
+  closeSuggestions()
+  updateControls()
+  announce(t('common.announced_cleared'))
+}
+
+function append(entry: HTMLElement, kind: 'o' | 'e' | 'help', text: string) {
+  if (!text) return
+  entry.append(Object.assign(document.createElement('pre'), { className: kind, textContent: text }))
+}
+
+async function run(raw: string) {
+  const command = raw.trim()
+  if (!command || busy || composing) return
+  if (history[history.length - 1] !== command) history.push(command)
+  if (history.length > 100) history.shift()
+  historyIndex = -1
+  input.value = ''
+  draft = ''
+  closeSuggestions()
+  if (command === 'clear') {
+    clearOutput()
+    return
+  }
+
+  const entry = entryTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement
+  entry.querySelector('pre')!.textContent = '❯ ' + command
+  const state = entry.querySelector<HTMLElement>('.entry-state')!
+  output.append(entry)
+  // 只在当前页面保留有限记录，不持久化可能含凭据的输入和输出。
+  const entries = output.querySelectorAll('.entry')
+  if (entries.length > 100) entries[0].remove()
+  busy = true
+  output.setAttribute('aria-busy', 'true')
+  statusPoller.setActive(false)
+  updateControls()
+  scrollToLatest(true)
+  announce(t('common.announced_running'))
+
+  let failed = false
+  let resultText = ''
+  try {
+    let out = ''
+    let err = ''
+    let code = 0
+    let kind: 'o' | 'help' = 'o'
+    if (command === 'exit') {
+      err = t('common.exit_hint')
+      code = 1
+    } else if (command === 'help' || command.startsWith('help ')) {
+      out = getHelp(command.slice(4).trim())
+      kind = 'help'
+    } else if (command.startsWith('!')) {
+      const value = command.slice(1).trim()
+      if (value) ({ out, err, code } = await shell(value))
+      else { err = t('common.shell_empty'); code = 1 }
+    } else {
+      const args = parseCommandLine(command)
+      const result = await ctl(args)
+      ;({ out, err, code } = result)
+      // 命令仍显示原有结果，但成功标记必须同时满足 JSON 契约与退出码。
+      const decoded = decodeCtlResult(result)
+      failed = !decoded.ok
+      if (failed && !err && (decoded.code.startsWith('transport.') || !out)) err = decoded.message
+      if (!args.includes('--raw')) out = formatCtlOutput(out)
+      if (['service', 'sub', 'node', 'catalog'].includes(args[0])) void refreshCompletions()
+    }
+    failed ||= code !== 0
+    append(entry, kind, out)
+    append(entry, 'e', err)
+    resultText = [out, err].filter(Boolean).join('\n')
+  } catch (error) {
+    failed = true
+    resultText = t('common.exception', { message: error instanceof Error ? error.message : String(error) })
+    append(entry, 'e', resultText)
+  } finally {
+    lastResult = resultText
+    copyButton.textContent = t('common.copy')
+    entry.dataset.state = failed ? 'error' : 'success'
+    state.textContent = failed ? t('common.failed') : t('common.success')
+    busy = false
+    output.setAttribute('aria-busy', 'false')
+    updateControls()
+    scrollToLatest()
+    announce(failed ? t('common.announced_failed') : t('common.announced_success'))
+    statusPoller.setActive(!document.hidden)
+  }
+}
+
+function completeInput(): boolean {
+  if (busy || composing) return false
+  const result = complete(input.value, knownGroups, knownSubscriptions)
+  if (!result.candidates.length) { closeSuggestions(); return false }
+  setInput(result.completed)
+  if (result.candidates.length > 1) {
+    for (const candidate of result.candidates) {
+      const button = Object.assign(document.createElement('button'), { type: 'button', textContent: candidate })
+      button.dataset.completion = candidate
+      suggestions.append(button)
+    }
+    suggestions.hidden = false
+    announce(t('common.announced_candidates', { count: result.candidates.length }))
+  }
+  return true
+}
+
+function moveHistory(direction: -1 | 1) {
+  if (busy || !history.length || (direction === 1 && historyIndex === -1)) return
+  if (historyIndex === -1) { draft = input.value; historyIndex = history.length }
+  historyIndex = Math.max(0, historyIndex + direction)
+  if (historyIndex >= history.length) { historyIndex = -1; input.value = draft }
+  else input.value = history[historyIndex]
+  closeSuggestions()
+  updateControls()
+  focusInput()
+}
+
+function renderStaticTexts() {
   environment.textContent = inKsu ? t('common.env_ksu') : t('common.env_preview')
+  environment.title = inKsu ? t('common.env_ksu') : t('common.env_preview_desc')
+  input.placeholder = t('common.input_placeholder')
+  completeButton.title = t('common.complete_hint')
+  previousButton.title = t('common.history_prev_hint')
+  previousButton.setAttribute('aria-label', t('common.history_prev_hint'))
+  nextButton.title = t('common.history_next_hint')
+  nextButton.setAttribute('aria-label', t('common.history_next_hint'))
+  runButton.title = t('common.run_hint')
+  runButton.setAttribute('aria-label', t('common.run_hint'))
+  copyButton.textContent = t('common.copy')
+  clearButton.textContent = t('common.clear')
+  latestButton.textContent = t('common.scroll_latest')
+
+  const welcomeH2 = welcome.querySelector('h2')
+  if (welcomeH2) welcomeH2.textContent = t('common.welcome_title')
+  const welcomeP = welcome.querySelector('.welcome-hint')
+  if (welcomeP) welcomeP.innerHTML = t('common.welcome_hint')
+  const scStatus = welcome.querySelector('[data-command="service status"] span')
+  if (scStatus) scStatus.textContent = t('common.shortcut_status')
+  const scNode = welcome.querySelector('[data-command="node current"] span')
+  if (scNode) scNode.textContent = t('common.shortcut_node')
+  const scCatalog = welcome.querySelector('[data-command="catalog list"] span')
+  if (scCatalog) scCatalog.textContent = t('common.shortcut_catalog')
+  const scHelp = welcome.querySelector('[data-command="help"] span')
+  if (scHelp) scHelp.textContent = t('common.shortcut_help')
+
+  renderServiceState()
 }
 
 function initLangSelect() {
@@ -126,135 +305,91 @@ function initLangSelect() {
 
 onLocaleChange(newLocale => {
   langSelect.value = newLocale
-  renderStatusBar()
-  if (outputHasOnlyHelp) {
-    output.replaceChildren()
-    append('help', getHelp())
-  }
+  renderStaticTexts()
 })
 
-const statusPoller = createPoller(
-  () => ctlJson<{ state?: string }>(['service', 'status']),
-  result => { if (result.ok) renderServiceState(result.data?.state) },
-)
-
-async function run(raw: string) {
-  const command = raw.trim()
-  if (!command || busy) return
-
-  outputHasOnlyHelp = false
-  history = [...history, command]
+form.addEventListener('submit', event => { event.preventDefault(); void run(input.value) })
+input.addEventListener('compositionstart', () => { composing = true })
+input.addEventListener('compositionend', () => { composing = false; updateControls() })
+input.addEventListener('input', () => {
   historyIndex = -1
-  tabCount = 0
-  input.value = ''
-  append('i', PROMPT + command)
-  setBusy(true)
-  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-
-  try {
-    let out = ''
-    let err = ''
-    let code = 0
-
-    if (command === 'clear') {
-      output.replaceChildren()
-      return
-    }
-    if (command === 'exit') {
-      err = t('common.webview_exit_hint')
-    } else if (command === 'help') {
-      append('help', getHelp())
-    } else if (command.startsWith('help ')) {
-      append('help', getHelp(command.slice(5).trim()))
-    } else if (command.startsWith('!')) {
-      const value = command.slice(1).trim()
-      if (value) ({ out, err, code } = await shell(value))
-    } else {
-      const args = parseCommandLine(command)
-      ;({ out, err, code } = await ctl(args))
-      if (!args.includes('--raw')) out = formatCtlOutput(out)
-      if (['service', 'sub', 'node', 'catalog'].includes(args[0])) {
-        void refreshCompletions()
-        if (args[0] === 'service') statusPoller.refresh()
-      }
-    }
-
-    if (out) append('o', out)
-    if (err) append('e', err)
-    if (code !== 0 && !out && !err) append('e', t('common.exit_code', { code }))
-  } catch (error) {
-    append('e', t('common.exception', { message: error instanceof Error ? error.message : String(error) }))
-  } finally {
-    setBusy(false)
-  }
-}
-
-function completeInput() {
-  if (busy) return
-  const result = complete(input.value, knownGroups, knownSubscriptions)
-  if (!result.candidates.length) return
-  if (result.candidates.length === 1) {
-    input.value = result.completed
-    tabCount = 0
-  } else if (tabCount === 0) {
-    input.value = result.completed
-    tabCount = 1
-  } else {
-    appendCandidates(result.candidates)
-    tabCount = 0
-  }
-}
-
-function historyPrevious() {
-  if (busy || !history.length) return
-  historyIndex = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1)
-  input.value = history[historyIndex]
-  tabCount = 0
-}
-
-function historyNext() {
-  if (busy || historyIndex === -1) return
-  historyIndex += 1
-  if (historyIndex >= history.length) {
-    historyIndex = -1
-    input.value = ''
-  } else {
-    input.value = history[historyIndex]
-  }
-  tabCount = 0
-}
-
+  closeSuggestions()
+  updateControls()
+})
 input.addEventListener('keydown', event => {
-  if (event.key === 'Enter') {
+  if (event.isComposing || composing || event.keyCode === 229) return
+  if (event.key === 'Tab' && !event.shiftKey && completeInput()) event.preventDefault()
+  else if (event.key === 'ArrowDown' && !suggestions.hidden) {
     event.preventDefault()
-    if (!busy) void run(input.value)
-  } else if (event.key === 'Tab') {
+    suggestions.querySelector<HTMLButtonElement>('button')?.focus()
+  } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault()
-    completeInput()
-  } else if (event.key === 'ArrowUp') {
+    moveHistory(event.key === 'ArrowUp' ? -1 : 1)
+  } else if (event.key === 'Enter') {
     event.preventDefault()
-    historyPrevious()
-  } else if (event.key === 'ArrowDown') {
+    if (!event.repeat) void run(input.value)
+  } else if (event.key === 'l' && event.ctrlKey && !busy) {
     event.preventDefault()
-    historyNext()
-  } else {
-    tabCount = 0
+    clearOutput()
   }
 })
-
-terminal.addEventListener('click', () => input.focus())
+suggestions.addEventListener('keydown', event => {
+  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+  event.preventDefault()
+  const buttons = Array.from(suggestions.querySelectorAll('button'))
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+  const next = index + (event.key === 'ArrowDown' ? 1 : -1)
+  if (next < 0) focusInput()
+  else buttons[Math.min(next, buttons.length - 1)]?.focus()
+})
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !suggestions.hidden) { closeSuggestions(); focusInput() }
+})
+document.addEventListener('pointerdown', event => {
+  if (!form.contains(event.target as Node)) closeSuggestions()
+})
+document.addEventListener('click', event => {
+  const button = (event.target as Element).closest<HTMLButtonElement>('[data-command], [data-completion]')
+  if (!button || busy) return
+  setInput(button.dataset.command ?? replaceCompletion(input.value, button.dataset.completion!))
+})
 completeButton.addEventListener('click', completeInput)
-previousButton.addEventListener('click', () => { historyPrevious(); input.focus() })
-nextButton.addEventListener('click', () => { historyNext(); input.focus() })
-runButton.addEventListener('click', () => { void run(input.value) })
-serviceStatus.addEventListener('click', event => { event.stopPropagation(); void run('service status') })
-
-document.addEventListener('visibilitychange', () => {
-  statusPoller.setActive(!document.hidden)
+previousButton.addEventListener('click', () => moveHistory(-1))
+nextButton.addEventListener('click', () => moveHistory(1))
+serviceStatus.addEventListener('click', () => { void run('service status') })
+clearButton.addEventListener('click', clearOutput)
+copyButton.addEventListener('click', async () => {
+  const value = lastResult
+  let copied = false
+  try {
+    await navigator.clipboard.writeText(value)
+    copied = true
+  } catch {}
+  if (value !== lastResult) return
+  copyButton.textContent = copied ? t('common.copied') : t('common.copy_failed')
+  announce(copied ? t('common.announced_copied') : t('common.announced_copy_fail'))
+})
+output.addEventListener('scroll', () => {
+  followOutput = output.scrollHeight - output.clientHeight - output.scrollTop < 24
+  latestButton.hidden = followOutput
+}, { passive: true })
+latestButton.addEventListener('click', () => scrollToLatest(true))
+const resizeObserver = new ResizeObserver(() => scrollToLatest())
+resizeObserver.observe(output)
+document.addEventListener('visibilitychange', () => statusPoller.setActive(!document.hidden && !busy))
+window.addEventListener('pagehide', () => {
+  statusPoller.setActive(false)
+  if (scrollFrame) cancelAnimationFrame(scrollFrame)
+  resizeObserver.disconnect()
+})
+window.addEventListener('pageshow', () => {
+  resizeObserver.observe(output)
+  statusPoller.setActive(!document.hidden && !busy)
 })
 
 initLangSelect()
-renderStatusBar()
-append('help', getHelp())
+renderStaticTexts()
+byId('environment').hidden = !(import.meta.env.DEV && !inKsu)
 void refreshCompletions()
+updateControls()
 statusPoller.setActive(!document.hidden)
