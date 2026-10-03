@@ -74,11 +74,26 @@ private fun translateErrorRu(raw: String): String {
         "诊断包路径不能为空" to "Путь к диагностическому пакету не может быть пустым",
         "sing-box 进程已退出" to "Процесс sing-box завершился",
         "sing-box 未运行，无法重新加载" to "sing-box не запущен, перезагрузка невозможна",
-        "核心或控制接口未在限定时间内就绪" to "Ядро или интерфейс управления не запустились вовремя"
+        "核心或控制接口未在限定时间内就绪" to "Ядро или интерфейс управления не запустились вовремя",
+        "订阅下载、转换或校验失败" to "Сбой загрузки, конвертации или проверки подписки",
+        "订阅下载或转换失败" to "Сбой загрузки или конвертации подписки",
+        "订阅更新失败" to "Сбой обновления подписки",
+        "订阅添加失败" to "Сбой добавления подписки",
+        "订阅删除失败" to "Сбой удаления подписки",
+        "订阅更新成功" to "Подписка успешно обновлена",
+        "订阅添加成功" to "Подписка успешно добавлена",
+        "订阅校验失败" to "Сбой проверки подписки",
+        "订阅转换失败" to "Сбой конвертации подписки",
+        "订阅下载失败" to "Сбой загрузки подписки"
     )
     exact[raw]?.let { return it }
 
     val patterns = listOf(
+        "订阅编辑，但后续操作失败[：:](.*)".toRegex() to "Подписка сохранена, но последующая операция не удалась: $1",
+        "订阅下载失败[：:]\\s*(.*)".toRegex() to "Сбой загрузки подписки: $1",
+        "订阅转换失败[：:]\\s*(.*)".toRegex() to "Сбой конвертации подписки: $1",
+        "订阅校验失败[：:]\\s*(.*)".toRegex() to "Сбой проверки подписки: $1",
+        "订阅\\s+(.*?)\\s+失败:\\s*(.*)".toRegex() to "Сбой подписки $1: $2",
         "未找到节点:\\s*(.*)".toRegex() to "Узел не найден: $1",
         "分组不存在:\\s*(.*)".toRegex() to "Группа не существует: $1",
         "未知出站模式:\\s*(.*)".toRegex() to "Неизвестный режим маршрутизации: $1",
@@ -114,6 +129,14 @@ private fun translateErrorRu(raw: String): String {
 
     if (result.any { it in '\u4e00'..'\u9fa5' }) {
         result = result
+            .replace("订阅下载、转换或校验失败", "Сбой загрузки, конвертации или проверки подписки")
+            .replace("订阅下载或转换失败", "Сбой загрузки или конвертации подписки")
+            .replace("订阅", "Подписка ")
+            .replace("下载", "загрузка ")
+            .replace("转换", "конвертация ")
+            .replace("校验", "проверка ")
+            .replace("节点", "узел ")
+            .replace("分组", "группа ")
             .replace("本地配置", "Локальная конфигурация")
             .replace("失败", "Ошибка")
             .replace("成功", "Успешно")
@@ -121,6 +144,8 @@ private fun translateErrorRu(raw: String): String {
             .replace("正在执行", "Выполняется")
             .replace("未运行", "Не запущен")
             .replace("已停止", "Остановлен")
+            .replace("：", ": ")
+            .replace("、", ", ")
     }
 
     return result
@@ -176,11 +201,26 @@ private fun translateErrorEn(raw: String): String {
         "诊断包路径不能为空" to "Diagnostics package path cannot be empty",
         "sing-box 进程已退出" to "sing-box process has exited",
         "sing-box 未运行，无法重新加载" to "sing-box is not running, cannot reload",
-        "核心或控制接口未在限定时间内就绪" to "Core or control interface did not get ready in time"
+        "核心或控制接口未在限定时间内就绪" to "Core or control interface did not get ready in time",
+        "订阅下载、转换或校验失败" to "Subscription download, conversion, or verification failed",
+        "订阅下载或转换失败" to "Subscription download or conversion failed",
+        "订阅更新失败" to "Failed to update subscription",
+        "订阅添加失败" to "Failed to add subscription",
+        "订阅删除失败" to "Failed to delete subscription",
+        "订阅更新成功" to "Subscription updated successfully",
+        "订阅添加成功" to "Subscription added successfully",
+        "订阅校验失败" to "Subscription verification failed",
+        "订阅转换失败" to "Subscription conversion failed",
+        "订阅下载失败" to "Subscription download failed"
     )
     exact[raw]?.let { return it }
 
     val patterns = listOf(
+        "订阅编辑，但后续操作失败[：:](.*)".toRegex() to "Subscription saved, but subsequent operation failed: $1",
+        "订阅下载失败[：:]\\s*(.*)".toRegex() to "Failed to download subscription: $1",
+        "订阅转换失败[：:]\\s*(.*)".toRegex() to "Failed to convert subscription: $1",
+        "订阅校验失败[：:]\\s*(.*)".toRegex() to "Failed to verify subscription: $1",
+        "订阅\\s+(.*?)\\s+失败:\\s*(.*)".toRegex() to "Subscription $1 failed: $2",
         "未找到节点:\\s*(.*)".toRegex() to "Node not found: $1",
         "分组不存在:\\s*(.*)".toRegex() to "Group does not exist: $1",
         "未知出站模式:\\s*(.*)".toRegex() to "Unknown outbound mode: $1",
@@ -216,6 +256,14 @@ private fun translateErrorEn(raw: String): String {
 
     if (result.any { it in '\u4e00'..'\u9fa5' }) {
         result = result
+            .replace("订阅下载、转换或校验失败", "Subscription download, conversion, or verification failed")
+            .replace("订阅下载或转换失败", "Subscription download or conversion failed")
+            .replace("订阅", "Subscription ")
+            .replace("下载", "download ")
+            .replace("转换", "conversion ")
+            .replace("校验", "verification ")
+            .replace("节点", "node ")
+            .replace("分组", "group ")
             .replace("本地配置", "Local Configuration")
             .replace("失败", "Failed")
             .replace("成功", "Success")
@@ -223,6 +271,8 @@ private fun translateErrorEn(raw: String): String {
             .replace("正在执行", "In progress")
             .replace("未运行", "Not running")
             .replace("已停止", "Stopped")
+            .replace("：", ": ")
+            .replace("、", ", ")
     }
 
     return result
